@@ -200,3 +200,10 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij,windows,macos,java
+
+# SpringBoot Sensitive Files
+.env
+application-prod.yml
+application-local.yml
+application-secret.yml
+*.properties
