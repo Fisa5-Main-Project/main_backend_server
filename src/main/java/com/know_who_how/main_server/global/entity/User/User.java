@@ -1,14 +1,19 @@
 package com.know_who_how.main_server.global.entity.User;
 
 import jakarta.persistence.*;
-import java.util.Date;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 
 @Entity
 @Table(name="users")
+@Getter
+@NoArgsConstructor
 public class User {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "login_id", unique = true, nullable = false)
@@ -23,7 +28,7 @@ public class User {
     // 날짜(YYYY-MM-DD) 형식으로 저장
     @Temporal(TemporalType.DATE)
     @Column(nullable = false)
-    private Date birth;
+    private LocalDate birth;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

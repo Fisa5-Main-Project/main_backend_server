@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Term {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Column(name = "term_id")
     private Long id;
 
-    @Column(name="term_name, nullable = false")
+    @Column(name="term_name", nullable = false)
     private String termName;
 
     @Column(name ="is_required", nullable = false)

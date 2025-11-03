@@ -9,7 +9,10 @@ public class UserTermId implements Serializable {
     private Long user;
     private Long term;
 
-    public UserTermId(){}
+    public UserTermId(Long user, Long term) {
+        this.user = user;
+        this.term = term;
+    }
 
 
     // UserTermId 객체의 user 필드값 + term 필드 값 모두 같은지 비교

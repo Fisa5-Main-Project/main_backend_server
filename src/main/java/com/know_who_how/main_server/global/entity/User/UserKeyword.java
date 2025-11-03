@@ -22,7 +22,7 @@ public class UserKeyword {
     @Column(name="retirement_keywords", nullable = false)
     private RetirementKeyword retirementKeyword;
 
-    @Column(name="investment_tendancy", nullable =  false)
-    private String investmentTendancy;
+    @Column(name="investment_tendency", nullable =  false)
+    private String investmentTendency;
 
 }
