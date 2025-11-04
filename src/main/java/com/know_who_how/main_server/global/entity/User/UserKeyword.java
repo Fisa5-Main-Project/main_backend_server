@@ -3,10 +3,12 @@ package com.know_who_how.main_server.global.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "user_keywords")
 @Getter
+@Setter
 @NoArgsConstructor
 public class UserKeyword {
     @Id

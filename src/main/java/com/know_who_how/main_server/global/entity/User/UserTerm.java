@@ -4,12 +4,14 @@ package com.know_who_how.main_server.global.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users_term")
 @Getter
+@Setter
 @NoArgsConstructor
 @IdClass(UserTermId.class)
 public class UserTerm {
