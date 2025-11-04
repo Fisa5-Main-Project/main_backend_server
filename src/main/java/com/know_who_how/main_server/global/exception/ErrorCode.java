@@ -10,7 +10,7 @@ public enum ErrorCode {
 
     // spring security exception
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "403", "접근권한이 없습니다."),
-    NOT_LOGIN_USER(HttpStatus.FORBIDDEN, "401", "로그인하지 않은 사용자입니다."),
+    NOT_LOGIN_USER(HttpStatus.UNAUTHORIZED, "401", "로그인하지 않은 사용자입니다."),
 
     // jwt token exception
     EMPTY_TOKEN_ERROR(HttpStatus.BAD_REQUEST, "400", "토큰이 비어있습니다."),
