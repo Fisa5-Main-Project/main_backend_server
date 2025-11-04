@@ -29,9 +29,6 @@ import java.util.stream.Collectors;
 public class JwtUtil {
     private final JwtProperties jwtProperties;
 
-    // 헤더 이름
-    public static final String AUTHORIZATION_HEADER = "Authorization";
-
     // 서명 키
     private Key accessKey;
     private Key refreshKey;
@@ -39,7 +36,7 @@ public class JwtUtil {
     @PostConstruct
     public void init() throws Exception {
         if (jwtProperties.getAccessSecret() == null || jwtProperties.getRefreshSecret() == null) {
-            throw new IllegalStateException("JWT secrets가 NULL");
+            throw new IllegalStateException("JWT secrets cannot be null");
         }
         // HMAC-SHA 키 생성을 위해 Base64 디코딩
         this.accessKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.getAccessSecret()));
@@ -67,12 +64,11 @@ public class JwtUtil {
 
     // accessToken 인증정보 추출
     public Authentication getAuthenticationFromAccessToken(String token) {
-        Claims claims = Jwts
-                .parser()
-                .setSigningKey(accessKey)
+        Claims claims = Jwts.parser()
+                .verifyWith((SecretKey) accessKey)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
         // Null-safe 하게 권한 정보 추출
         String authoritiesClaim = claims.get("authorities", String.class);
@@ -131,16 +127,6 @@ public class JwtUtil {
         }
     }
 
-    // 헤더의 토큰 추출 메서드
-    public String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
-    }
-
     //  토큰에서 userId(subject) 추출
     public Long extractUserId(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
@@ -156,7 +142,7 @@ public class JwtUtil {
     // 토큰에서 만료 시간 추출
     public Date extractExpiration(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
-        return Jwts.parser() // [수정됨] parserBuilder() 아님
+        return Jwts.parser()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
