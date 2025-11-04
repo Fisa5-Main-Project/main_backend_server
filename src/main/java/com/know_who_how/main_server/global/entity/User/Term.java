@@ -19,4 +19,7 @@ public class Term {
 
     @Column(name ="is_required", nullable = false)
     private boolean isRequired;
+
+    @Column(name = "term_content", nullable = false)
+    private String termContent;
 }
