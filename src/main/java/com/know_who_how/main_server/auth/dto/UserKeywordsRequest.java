@@ -11,5 +11,5 @@ public class UserKeywordsRequest {
     private List<String> retirementKeywords;
 
     @NotBlank
-    private String investmentTendancy;
+    private String investmentTendency;
 }
