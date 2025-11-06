@@ -2,6 +2,7 @@ package com.know_who_how.main_server.user;
 
 import com.know_who_how.main_server.global.entity.Term.Term;
 import com.know_who_how.main_server.global.entity.Term.UserTerm;
+import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.user.dto.TermAgreementRequest;
@@ -66,13 +67,9 @@ public class UserServiceImpl implements UserService {
     // 회원 가입 로직 검증
     private void validateSignupRequest(UserSignupRequest request) {
         // 로그인 중복 검증
-        if(userRepository.existsByLoginId(request.getLoginId())){
-            throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
-        }
+        checkLoginIdDuplicate(request.getLoginId());
         // 전화 번호 중복 검증
-        if(userRepository.existsByPhoneNum(request.getPhoneNum())){
-            throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
-        }
+        checkPhoneNumDuplicate(request.getPhoneNum());
 
         // 약관 검증
         validateMandatoryTerms(request.getTermAgreements());

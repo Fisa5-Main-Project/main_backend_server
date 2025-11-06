@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.user.dto;
 
+import com.know_who_how.main_server.global.entity.User.Gender;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;

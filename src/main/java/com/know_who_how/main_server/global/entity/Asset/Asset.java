@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class Asset {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "asset_id")
     private Long id;
 

@@ -1,6 +1,7 @@
 package com.know_who_how.main_server.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -8,10 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TermAgreementRequest {
 
-    @NotBlank
+    @NotNull
     private Long termId;
 
-    @NotBlank
+    @NotNull
     private Boolean isAgreed;
 
 }

@@ -67,7 +67,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(
                                 "/api/v1/auth/login",     // 로그인
-                                "/api/v1/auth/signup",    // 회원가입
+                                "/user/signup",    // 회원가입
+                                "/user/**/exists-id", // 아이디 중복 확인
+                                "/user/**/exists-phonenum", // 전화번호 중복 확인
                                 "/public/**",          // 정적 리소스 등
                                 "/error"
                         ).permitAll()
