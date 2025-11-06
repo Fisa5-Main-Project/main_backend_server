@@ -1,15 +1,22 @@
 package com.know_who_how.main_server.global.entity.User;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+import static lombok.AccessLevel.PRIVATE;
+import static lombok.AccessLevel.PROTECTED;
+
 @Entity
 @Table(name="users")
 @Getter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = PROTECTED)
+@AllArgsConstructor(access = PRIVATE)
 public class User {
 
     @Id

@@ -1,16 +1,24 @@
-package com.know_who_how.main_server.global.entity.User;
+package com.know_who_how.main_server.global.entity.Term;
 
 
+import com.know_who_how.main_server.global.entity.User.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import static lombok.AccessLevel.PRIVATE;
+import static lombok.AccessLevel.PROTECTED;
+
 @Entity
 @Table(name = "users_term")
 @Getter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = PROTECTED)
+@AllArgsConstructor(access = PRIVATE)
 @IdClass(UserTermId.class)
 public class UserTerm {
 

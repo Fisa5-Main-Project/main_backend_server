@@ -1,4 +1,4 @@
-package com.know_who_how.main_server.global.entity.User;
+package com.know_who_how.main_server.global.entity.Term;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,7 +19,4 @@ public class Term {
 
     @Column(name ="is_required", nullable = false)
     private boolean isRequired;
-
-    @Column(name = "term_content", nullable = false)
-    private String termContent;
 }
