@@ -19,6 +19,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,12 +36,13 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() throws Exception {
-        if (jwtProperties.getAccessSecret() == null || jwtProperties.getRefreshSecret() == null) {
-            throw new IllegalStateException("JWT secrets cannot be null");
+        if (jwtProperties.getSecret() == null) {
+            throw new IllegalStateException("JWT secret cannot be null");
         }
-        // HMAC-SHA 키 생성을 위해 Base64 디코딩
-        this.accessKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.getAccessSecret()));
-        this.refreshKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.getRefreshSecret()));
+        // 비밀 키를 Base64 디코딩 대신 UTF-8 바이트로 처리
+        Key key = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
+        this.accessKey = key;
+        this.refreshKey = key;
     }
 
     // AccessToken - 일반 요청 인증용

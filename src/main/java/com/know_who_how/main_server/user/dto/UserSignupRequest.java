@@ -3,6 +3,8 @@ package com.know_who_how.main_server.user.dto;
 import com.know_who_how.main_server.global.entity.User.Gender;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -20,14 +22,11 @@ public class UserSignupRequest {
     private String name;
     @NotBlank
     private String phoneNum;
-    @NotBlank
+    @NotNull
     private LocalDate birth;
-    @NotBlank
+    @NotNull
     private Gender gender;
-    @NotBlank
-    private String job;
-
-    @NotBlank
+    @NotEmpty
     @Valid
     private List<TermAgreementRequest> termAgreements;
 

@@ -14,6 +14,7 @@ public enum ErrorCode {
     // spring security exception
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "SECURITY_001", "접근권한이 없습니다."),
     NOT_LOGIN_USER(HttpStatus.FORBIDDEN, "SECURITY_002", "로그인하지 않은 사용자입니다."),
+    INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "SECURITY_003", "비밀번호가 일치하지 않습니다."),
 
     // jwt token exception
     EMPTY_TOKEN_ERROR(HttpStatus.BAD_REQUEST, "JWT_001", "토큰이 비어있습니다."),
@@ -28,7 +29,12 @@ public enum ErrorCode {
     INVALID_KEYWORD_VALUE(HttpStatus.BAD_REQUEST, "AUTH_002", "유효하지 않은 은퇴 키워드입니다."),
     REQUIRED_TERM_NOT_AGREED(HttpStatus.BAD_REQUEST, "AUTH_003", "필수 약관에 동의해야 합니다."),
     LOGIN_ID_DUPLICATE(HttpStatus.CONFLICT, "AUTH_004", "이미 사용 중인 아이디입니다."),
-    PHONE_NUM_DUPLICATE(HttpStatus.CONFLICT, "AUTH_005", "이미 등록된 전화번호입니다.");
+    PHONE_NUM_DUPLICATE(HttpStatus.CONFLICT, "AUTH_005", "이미 등록된 전화번호입니다."),
+    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "AUTH_006", "비밀번호와 비밀번호 확인이 일치하지 않습니다."),
+    INVALID_CERTIFICATION_CODE(HttpStatus.BAD_REQUEST, "AUTH_007", "유효하지 않은 인증 코드입니다."),
+    CERTIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH_008", "인증 코드가 만료되었습니다."),
+    CERTIFICATION_CODE_NOT_FOUND(HttpStatus.BAD_REQUEST, "AUTH_009", "인증 코드를 찾을 수 없습니다."),
+    INVALID_PHONE_NUMBER(HttpStatus.BAD_REQUEST, "AUTH_010", "유효하지 않은 전화번호 형식입니다.");
 
 
     private final HttpStatus status;    // HTTP 상태

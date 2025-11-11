@@ -104,7 +104,6 @@ public class UserServiceImpl implements UserService {
                 birth(request.getBirth()).
                 gender(request.getGender()).
                 name(request.getName()).
-                job(request.getJob()).
                 build();
 
         return userRepository.save(user);
