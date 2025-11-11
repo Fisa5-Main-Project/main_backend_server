@@ -212,3 +212,5 @@ application.yml
 # Settings
 .gradle/
 .idea/
+
+/build
