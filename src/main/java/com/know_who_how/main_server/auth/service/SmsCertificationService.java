@@ -1,5 +1,7 @@
 package com.know_who_how.main_server.auth.service;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.know_who_how.main_server.auth.dto.SmsCertificationConfirmDto;
 import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
 import com.know_who_how.main_server.global.config.CoolSmsProperties;
@@ -9,26 +11,24 @@ import com.solapi.sdk.SolapiClient;
 import com.solapi.sdk.message.model.Message;
 import com.solapi.sdk.message.service.DefaultMessageService;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.Serializable;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SmsCertificationService {
 
     private final CoolSmsProperties coolSmsProperties;
+    private final RedisTemplate<String, Object> redisTemplate;
     private DefaultMessageService messageService;
 
-    // In-memory storage for certification codes (for demonstration purposes)
-    // In a real application, consider using Redis for persistence and scalability
-    private final Map<String, String> certificationCodes = new ConcurrentHashMap<>();
-    private final Map<String, LocalDateTime> certificationCodeTimestamps = new ConcurrentHashMap<>();
     private static final Duration EXPIRATION_TIME = Duration.ofMinutes(5); // 5 minutes expiration
 
     @PostConstruct
@@ -40,14 +40,13 @@ public class SmsCertificationService {
     }
 
     /**
-     * SMS 인증 번호를 전송합니다.
+     * SMS 인증 번호를 전송하고, 인증 정보를 Redis에 저장합니다.
      *
      * @param requestDto SMS 인증 요청 DTO
-     * @return 전송 성공 여부
+     * @return verificationId
      */
-    public boolean sendSmsCertification(SmsCertificationRequestDto requestDto) {
-        // 전화번호 유효성 검사는 DTO @Pattern으로 처리됨
-
+    public String sendSmsCertification(SmsCertificationRequestDto requestDto) {
+        String verificationId = UUID.randomUUID().toString();
         String certificationCode = createCertificationCode();
         Message message = new Message();
         message.setFrom(coolSmsProperties.getFromNumber());
@@ -55,10 +54,10 @@ public class SmsCertificationService {
         message.setText("[KnowWhoHow] 본인확인 인증번호는 [" + certificationCode + "] 입니다.");
 
         try {
-            this.messageService.send(message); // Assume void return or success by no exception
-            certificationCodes.put(requestDto.getPhoneNum(), certificationCode);
-            certificationCodeTimestamps.put(requestDto.getPhoneNum(), LocalDateTime.now());
-            return true;
+            this.messageService.send(message);
+            SmsVerificationData data = new SmsVerificationData(certificationCode, requestDto, false);
+            redisTemplate.opsForValue().set(verificationId, data, EXPIRATION_TIME);
+            return verificationId;
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR); // SMS 전송 중 오류 발생
         }
@@ -68,30 +67,37 @@ public class SmsCertificationService {
      * SMS 인증 번호를 확인합니다.
      *
      * @param confirmDto SMS 인증 확인 DTO
-     * @return 인증 성공 여부
+     * @return 인증 성공 메시지
      */
-    public boolean confirmSmsCertification(SmsCertificationConfirmDto confirmDto) {
-        String storedCode = certificationCodes.get(confirmDto.getPhoneNum());
-        LocalDateTime storedTimestamp = certificationCodeTimestamps.get(confirmDto.getPhoneNum());
+    public String confirmSmsCertification(SmsCertificationConfirmDto confirmDto) {
+        String verificationId = confirmDto.getVerificationId();
+        SmsVerificationData data = (SmsVerificationData) redisTemplate.opsForValue().get(verificationId);
 
-        if (storedCode == null || storedTimestamp == null) {
+        if (data == null) {
             throw new CustomException(ErrorCode.CERTIFICATION_CODE_NOT_FOUND);
         }
 
-        if (LocalDateTime.now().isAfter(storedTimestamp.plus(EXPIRATION_TIME))) {
-            certificationCodes.remove(confirmDto.getPhoneNum());
-            certificationCodeTimestamps.remove(confirmDto.getPhoneNum());
-            throw new CustomException(ErrorCode.CERTIFICATION_CODE_EXPIRED);
-        }
-
-        if (!storedCode.equals(confirmDto.getCertificationCode())) {
+        if (!data.getCertificationCode().equals(confirmDto.getAuthCode())) {
             throw new CustomException(ErrorCode.INVALID_CERTIFICATION_CODE);
         }
 
-        // 인증 성공 시, 코드 삭제 (재사용 방지)
-        certificationCodes.remove(confirmDto.getPhoneNum());
-        certificationCodeTimestamps.remove(confirmDto.getPhoneNum());
-        return true;
+        // 인증 성공 시, Redis에 저장된 데이터의 isConfirmed 상태를 true로 업데이트
+        SmsVerificationData updatedData = new SmsVerificationData(data.getCertificationCode(), data.getUserData(), true);
+        redisTemplate.opsForValue().set(verificationId, updatedData, EXPIRATION_TIME);
+
+        return "인증번호가 일치합니다.";
+    }
+
+    public SmsCertificationRequestDto getUserVerificationData(String verificationId) {
+        SmsVerificationData data = (SmsVerificationData) redisTemplate.opsForValue().get(verificationId);
+        if (data == null || !data.isConfirmed()) {
+            throw new CustomException(ErrorCode.CERTIFICATION_CODE_NOT_FOUND); // 인증되지 않았거나 만료됨
+        }
+        return data.getUserData();
+    }
+
+    public void removeUserVerificationData(String verificationId) {
+        redisTemplate.delete(verificationId);
     }
 
     /**
@@ -103,5 +109,22 @@ public class SmsCertificationService {
         SecureRandom random = new SecureRandom();
         int code = 100000 + random.nextInt(900000); // 100000 ~ 999999
         return String.valueOf(code);
+    }
+
+    @Getter
+    private static class SmsVerificationData implements Serializable {
+        private final String certificationCode;
+        private final SmsCertificationRequestDto userData;
+        private final boolean isConfirmed;
+
+        @JsonCreator
+        public SmsVerificationData(
+                @JsonProperty("certificationCode") String certificationCode,
+                @JsonProperty("userData") SmsCertificationRequestDto userData,
+                @JsonProperty("isConfirmed") boolean isConfirmed) {
+            this.certificationCode = certificationCode;
+            this.userData = userData;
+            this.isConfirmed = isConfirmed;
+        }
     }
 }

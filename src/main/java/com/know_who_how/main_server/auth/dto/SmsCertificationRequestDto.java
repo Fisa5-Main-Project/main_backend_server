@@ -11,14 +11,11 @@ public class SmsCertificationRequestDto {
     private String name;
 
     @NotBlank(message = "생년월일은 필수 입력 항목입니다.")
-    @Pattern(regexp = "^\\d{8}$", message = "생년월일은 YYYYMMDD 형식의 8자리 숫자여야 합니다.")
-    private String birthDate;
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "생년월일은 YYYY-MM-DD 형식이어야 합니다.")
+    private String birth;
 
-    @NotNull(message = "주민등록번호 뒷자리 첫 번째 숫자는 필수 입력 항목입니다.")
-    private Integer genderDigit;
-
-    @NotBlank(message = "통신사는 필수 입력 항목입니다.")
-    private String telecom;
+    @NotNull(message = "성별은 필수 입력 항목입니다.")
+    private String gender;
 
     @NotBlank(message = "전화번호는 필수 입력 항목입니다.")
     @Pattern(regexp = "^01(?:0|1|[6-9])(?:\\d{3}|\\d{4})\\d{4}$", message = "유효하지 않은 전화번호 형식입니다.")

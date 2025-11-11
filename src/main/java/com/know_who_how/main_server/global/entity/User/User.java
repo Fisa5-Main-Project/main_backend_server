@@ -55,12 +55,16 @@ public class User implements UserDetails {
     @Column(name = "asset_total")
     private Long assetTotal;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "investment_tendancy")
+    private InvestmentTendancy investmentTendancy;
+
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, String telecom) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, String telecom, InvestmentTendancy investmentTendancy) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
@@ -68,6 +72,7 @@ public class User implements UserDetails {
         this.gender = gender;
         this.name = name;
         this.telecom = telecom;
+        this.investmentTendancy = investmentTendancy;
         this.roles.add("ROLE_USER"); // 회원가입 시 기본 권한
     }
 
@@ -114,6 +119,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
+        
         // 계정이 활성화되었는지
         return true;
     }

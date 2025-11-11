@@ -39,10 +39,7 @@ public class SecurityConfig {
     // [신규] 인증이 필요 없는 API 경로 (v1 적용)
     private static final String[] AUTH_WHITELIST = {
             "/api/v1/auth/login",                   // 로그인
-            "/api/v1/auth/signup",                  // 회원가입
-            "/api/v1/auth/sms-certification/sends", // SMS 인증번호 발송
-            "/api/v1/auth/sms-certification/confirms",// SMS 인증번호 확인
-            "/api/v1/auth/check-id",                // 아이디 중복 확인
+            "/api/v1/auth/signup/**",               // 회원가입 관련 모든 경로
             "/swagger-ui.html",                     // Swagger UI HTML
             "/swagger-ui/**",                       // Swagger UI (JS, CSS 등)
             "/v3/api-docs/**",                      // OpenAPI 3.0 Docs
