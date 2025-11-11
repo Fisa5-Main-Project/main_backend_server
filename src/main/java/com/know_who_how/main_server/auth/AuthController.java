@@ -31,6 +31,17 @@ public class AuthController {
     }
 
     /**
+     * 테스트용 SMS 인증 번호 전송 요청
+     * @param requestDto SMS 인증 요청 DTO
+     * @return 성공 여부
+     */
+    @PostMapping("/signup/test-sms")
+    public ApiResponse<Map<String, String>> sendTestSmsCertification(@Valid @RequestBody SmsCertificationRequestDto requestDto) {
+        Map<String, String> testData = smsCertificationService.sendTestSmsCertification(requestDto);
+        return ApiResponse.onSuccess(testData);
+    }
+
+    /**
      * SMS 인증 번호 확인 요청
      * @param confirmDto SMS 인증 확인 DTO (전화번호, 인증번호)
      * @return 성공 여부
@@ -75,8 +86,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<String> logout(@RequestHeader("Authorization") String refreshToken) {
-        authService.logout(refreshToken);
+    public ApiResponse<String> logout(@RequestHeader("Authorization") String accessToken,
+                                      @Valid @RequestBody LogoutRequestDto requestDto) {
+        authService.logout(accessToken, requestDto.getRefreshToken());
         return ApiResponse.onSuccess("로그아웃이 완료되었습니다.");
     }
 }

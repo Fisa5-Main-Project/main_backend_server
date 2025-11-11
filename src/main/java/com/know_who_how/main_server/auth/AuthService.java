@@ -21,6 +21,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final AuthRepository authRepository; // Assuming this is for finding user by loginId
     private final UserRepository userRepository;
     private final TermRepository termRepository;
     private final UserTermRepository userTermRepository;
@@ -68,10 +68,7 @@ public class AuthService {
             throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
         }
 
-        // 4. 비밀번호 확인
-        if (!requestDto.getPassword().equals(requestDto.getPasswordConfirm())) {
-            throw new CustomException(ErrorCode.PASSWORD_MISMATCH);
-        }
+        // 4. 비밀번호 확인 (passwordConfirm 필드 제거로 인해 확인 로직 삭제)
 
         // 5. 약관 동의 확인 및 저장
         List<Term> requiredTerms = termRepository.findByIsRequired(true);
@@ -124,29 +121,48 @@ public class AuthService {
 
     /**
      * 사용자 로그아웃을 처리합니다.
+     * White-list 전략: Redis에서 사용자의 Refresh Token을 삭제합니다.
+     * 또한, 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가합니다.
      *
-     * @param refreshToken 리프레시 토큰
+     * @param accessToken     현재 사용중인 Access Token (Bearer 포함)
+     * @param refreshToken    무효화할 Refresh Token
      */
-    public void logout(String refreshToken) {
-        // 1. Extract "Bearer " prefix
-        if (refreshToken != null && refreshToken.startsWith("Bearer ")) {
-            refreshToken = refreshToken.substring(7);
-        } else {
+    public void logout(String accessToken, String refreshToken) {
+        // 1. Access Token 유효성 검사 (Filter에서 이미 처리하지만, 추가적으로 수행 가능)
+        if (accessToken == null || !accessToken.startsWith("Bearer ")) {
             throw new CustomException(ErrorCode.INVALID_TOKEN_FORMAT);
         }
+        String pureAccessToken = accessToken.substring(7);
+        jwtUtil.validateAccessToken(pureAccessToken);
 
-        // 2. Validate the refresh token
-        jwtUtil.validateRefreshToken(refreshToken);
+        // 2. 현재 사용자의 인증 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new CustomException(ErrorCode.SECURITY_CONTEXT_NOT_FOUND);
+        }
+        String userId = authentication.getName();
 
-        // 3. Check if already logged out
-        if (redisTemplate.opsForValue().get(refreshToken) != null) {
-            throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT);
+        // 3. Redis에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
+        String redisKey = "RT:" + userId;
+        Object storedToken = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedToken == null) {
+            throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT); // 이미 로그아웃 처리됨
+        }
+        if (!storedToken.toString().equals(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        // 4. Add to blacklist (Redis)
-        Date expiration = jwtUtil.extractExpiration(refreshToken, true);
+        // 4. Redis에서 해당 유저의 Refresh Token 삭제
+        redisTemplate.delete(redisKey);
+
+        // 5. 현재 요청에 사용된 Access Token을 블랙리스트에 추가
+        Date expiration = jwtUtil.extractExpiration(pureAccessToken, false);
         long remainingValidity = expiration.getTime() - System.currentTimeMillis();
-        redisTemplate.opsForValue().set(refreshToken, "logout", Duration.ofMillis(remainingValidity));
+
+        if (remainingValidity > 0) {
+            redisTemplate.opsForValue().set(pureAccessToken, "logout", Duration.ofMillis(remainingValidity));
+        }
     }
 
     /**
@@ -175,7 +191,12 @@ public class AuthService {
         String accessToken = jwtUtil.createAccessToken(userId, authorities);
         String refreshToken = jwtUtil.createRefreshToken(userId);
 
-        // 5. TokenResponseDto로 반환
+        // 5. Refresh Token을 Redis에 저장 (userId를 key로 사용)
+        Date refreshTokenExpiration = jwtUtil.extractExpiration(refreshToken, true);
+        Duration refreshDuration = Duration.ofMillis(refreshTokenExpiration.getTime() - System.currentTimeMillis());
+        redisTemplate.opsForValue().set("RT:" + userId, refreshToken, refreshDuration);
+
+        // 6. TokenResponseDto로 반환
         return TokenResponseDto.builder()
                 .grantType("Bearer") // Add grantType
                 .accessToken(accessToken)
@@ -204,12 +225,11 @@ public class AuthService {
             User testUser = User.builder()
                     .loginId("testuser1")
                     .password(passwordEncoder.encode("password123!"))
-                    .name("이종혁")
-                    .phoneNum("01092377224")
-                    .birth(LocalDate.of(1999, 2, 7))
+                    .name("홍길동")
+                    .phoneNum("01011112222")
+                    .birth(LocalDate.of(2001, 3, 24))
                     .gender(Gender.M)
                     .investmentTendancy(InvestmentTendancy.안정추구형)
-                    .telecom("SKT") // Add telecom value
                     .build();
             userRepository.save(testUser);
         }

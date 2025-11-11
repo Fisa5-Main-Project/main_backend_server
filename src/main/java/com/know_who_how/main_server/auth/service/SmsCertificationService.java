@@ -8,21 +8,25 @@ import com.know_who_how.main_server.global.config.CoolSmsProperties;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.solapi.sdk.SolapiClient;
+import com.solapi.sdk.message.exception.SolapiMessageNotReceivedException;
 import com.solapi.sdk.message.model.Message;
 import com.solapi.sdk.message.service.DefaultMessageService;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SmsCertificationService {
 
     private final CoolSmsProperties coolSmsProperties;
@@ -58,8 +62,35 @@ public class SmsCertificationService {
             SmsVerificationData data = new SmsVerificationData(certificationCode, requestDto, false);
             redisTemplate.opsForValue().set(verificationId, data, EXPIRATION_TIME);
             return verificationId;
+        } catch (SolapiMessageNotReceivedException e) {
+            log.error("SMS 전송 실패, 상세 정보: {}", e.getFailedMessageList());
+            log.error("에러 메시지: {}", e.getMessage());
+            throw new CustomException(ErrorCode.SMS_SEND_FAILURE);
         } catch (Exception e) {
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR); // SMS 전송 중 오류 발생
+            log.error("SMS 인증 처리 중 알 수 없는 오류 발생", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * 테스트용 SMS 인증 번호를 발급하고, 인증 정보를 Redis에 저장합니다.
+     * 실제 SMS는 발송하지 않습니다.
+     *
+     * @param requestDto SMS 인증 요청 DTO
+     * @return Map containing "verificationId" and "authCode"
+     */
+    public Map<String, String> sendTestSmsCertification(SmsCertificationRequestDto requestDto) {
+        String verificationId = UUID.randomUUID().toString();
+        String certificationCode = "123456"; // 고정된 테스트 인증번호
+
+        try {
+            SmsVerificationData data = new SmsVerificationData(certificationCode, requestDto, false);
+            redisTemplate.opsForValue().set(verificationId, data, EXPIRATION_TIME);
+            log.info("테스트용 SMS 인증 정보 생성 완료. verificationId: {}, authCode: {}", verificationId, certificationCode);
+            return Map.of("verificationId", verificationId, "authCode", certificationCode);
+        } catch (Exception e) {
+            log.error("테스트용 SMS 인증 정보 생성 중 오류 발생", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -115,13 +146,14 @@ public class SmsCertificationService {
     private static class SmsVerificationData implements Serializable {
         private final String certificationCode;
         private final SmsCertificationRequestDto userData;
+        @JsonProperty("confirmed")
         private final boolean isConfirmed;
 
         @JsonCreator
         public SmsVerificationData(
                 @JsonProperty("certificationCode") String certificationCode,
                 @JsonProperty("userData") SmsCertificationRequestDto userData,
-                @JsonProperty("isConfirmed") boolean isConfirmed) {
+                @JsonProperty("confirmed") boolean isConfirmed) {
             this.certificationCode = certificationCode;
             this.userData = userData;
             this.isConfirmed = isConfirmed;

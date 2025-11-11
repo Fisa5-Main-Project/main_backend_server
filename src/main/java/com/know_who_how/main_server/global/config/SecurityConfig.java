@@ -4,6 +4,11 @@ import com.know_who_how.main_server.global.jwt.JwtAccessDeniedHandler;
 import com.know_who_how.main_server.global.jwt.JwtAuthEntryPoint;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,6 +52,31 @@ public class SecurityConfig {
             "/webjars/**",                          // Swagger UI Webjars
             "/error"
     };
+
+    @Bean
+    public OpenAPI openAPI() {
+        Info info = new Info()
+                .title("KnowWhoHow API Docs")
+                .version("v1.0.0")
+                .description("KnowWhoHow 프로젝트의 API 명세서입니다.");
+
+        // Security Scheme 이름
+        String jwtSchemeName = "Bearer Authentication";
+        // API 요청 헤더에 인증 정보 포함
+        SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
+        // SecuritySchemes 등록
+        Components components = new Components()
+                .addSecuritySchemes(jwtSchemeName, new SecurityScheme()
+                        .name(jwtSchemeName)
+                        .type(SecurityScheme.Type.HTTP) // HTTP 방식
+                        .scheme("bearer")
+                        .bearerFormat("JWT")); // 토큰 형식 지정
+
+        return new OpenAPI()
+                .info(info)
+                .addSecurityItem(securityRequirement)
+                .components(components);
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

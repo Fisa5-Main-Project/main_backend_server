@@ -39,18 +39,30 @@ public class JwtUtil {
         if (jwtProperties.getSecret() == null) {
             throw new IllegalStateException("JWT secret cannot be null");
         }
-        // 비밀 키를 Base64 디코딩 대신 UTF-8 바이트로 처리
-        Key key = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
+        // [임시 디버깅 로그] 설정된 토큰 유효기간 값을 확인합니다.
+        log.info("Loaded Access Token Validity (seconds): {}", jwtProperties.getAccessTokenValidityInSeconds());
+        log.info("Loaded Refresh Token Validity (seconds): {}", jwtProperties.getRefreshTokenValidityInSeconds());
+
+        // [수정] Base64로 인코딩된 시크릿 키를 디코딩하여 사용합니다.
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
+        Key key = Keys.hmacShaKeyFor(keyBytes);
         this.accessKey = key;
         this.refreshKey = key;
     }
 
     // AccessToken - 일반 요청 인증용
     public String createAccessToken(Long userId, List<String> authorities) {
+        long now = System.currentTimeMillis();
+        long validity = jwtProperties.getAccessTokenValidityInSeconds() * 1000L;
+        Date expiration = new Date(now + validity);
+
+        // [임시 디버깅 로그] 토큰 생성 시 사용되는 만료 시간 값을 확인합니다.
+        log.info("Creating Access Token. Now: {}, Validity: {}ms, Expiration: {}", new Date(now), validity, expiration);
+
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .claim("authorities", String.join(",", authorities))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessTokenValidityInSeconds() * 1000L))
+                .setExpiration(expiration)
                 .signWith(accessKey, SignatureAlgorithm.HS512)
                 .compact();
     }
@@ -107,24 +119,24 @@ public class JwtUtil {
 
         try {
             Jwts.parser()
-                    .setSigningKey(key)
+                    .verifyWith((SecretKey) key)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
         } catch (SecurityException e) {
-            log.info("JWT 서명 검증 실패");
+            log.error("JWT 서명 검증 실패", e);
             throw new CustomException(ErrorCode.INVALID_TOKEN_SIGNATURE);
         } catch (MalformedJwtException e) {
-            log.warn("JWT 형식 오류");
+            log.error("JWT 형식 오류", e);
             throw new CustomException(ErrorCode.MALFORMED_TOKEN_ERROR);
         } catch (ExpiredJwtException e) {
-            log.info("JWT 만료");
+            log.error("JWT 만료", e);
             throw new CustomException(ErrorCode.TOKEN_EXPIRED);
         } catch (UnsupportedJwtException e) {
-            log.info("지원되지 않는 JWT 토큰 형식");
+            log.error("지원되지 않는 JWT 토큰 형식", e);
             throw new CustomException(ErrorCode.UNSUPPORTED_TOKEN_ERROR);
         } catch (IllegalArgumentException e) {
-            log.warn("JWT 파싱 실패 - 비어있는 토큰 등");
+            log.error("JWT 파싱 실패 - 비어있는 토큰 등", e);
             throw new CustomException(ErrorCode.TOKEN_PARSING_FAILED);
         }
     }
@@ -132,11 +144,11 @@ public class JwtUtil {
     //  토큰에서 userId(subject) 추출
     public Long extractUserId(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
-        Claims claims = Jwts.parser() // [수정됨] parserBuilder() 아님
-                .setSigningKey(key)
+        Claims claims = Jwts.parser()
+                .verifyWith((SecretKey) key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
         return Long.parseLong(claims.getSubject());
     }
@@ -145,10 +157,10 @@ public class JwtUtil {
     public Date extractExpiration(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
         return Jwts.parser()
-                .setSigningKey(key)
+                .verifyWith((SecretKey) key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody()
+                .parseSignedClaims(token)
+                .getPayload()
                 .getExpiration();
     }
 

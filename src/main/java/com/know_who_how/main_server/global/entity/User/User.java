@@ -49,9 +49,6 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(nullable = false, length = 20)
-    private String telecom; // 통신사 정보 추가
-
     @Column(name = "asset_total")
     private Long assetTotal;
 
@@ -64,14 +61,13 @@ public class User implements UserDetails {
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, String telecom, InvestmentTendancy investmentTendancy) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, InvestmentTendancy investmentTendancy) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
         this.birth = birth;
         this.gender = gender;
         this.name = name;
-        this.telecom = telecom;
         this.investmentTendancy = investmentTendancy;
         this.roles.add("ROLE_USER"); // 회원가입 시 기본 권한
     }
