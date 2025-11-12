@@ -129,17 +129,11 @@ public class AuthService {
      * @param requestDto 로그아웃 요청 DTO (RefreshToken 포함)
      */
     @Transactional
-    public void logout(HttpServletRequest request, LogoutRequestDto requestDto) {
-        // 1. Access Token 추출
-        String accessToken = resolveToken(request);
-        if (accessToken == null) {
-            throw new CustomException(ErrorCode.INVALID_TOKEN_FORMAT);
-        }
-
-        // 2. Access Token에서 UserId 추출 (만료 여부와 상관없이)
+    public void logout(String accessToken, LogoutRequestDto requestDto) {
+        // 1. Access Token에서 UserId 추출 (만료 여부와 상관없이)
         Long userId = jwtUtil.extractUserId(accessToken, false);
 
-        // 3. Redis에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
+        // 2. Redis에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
         String redisKey = "RT:" + userId;
         Object storedToken = redisTemplate.opsForValue().get(redisKey);
 
@@ -147,25 +141,16 @@ public class AuthService {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        // 4. Redis에서 해당 유저의 Refresh Token 삭제
+        // 3. Redis에서 해당 유저의 Refresh Token 삭제
         redisTemplate.delete(redisKey);
 
-        // 5. 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가
+        // 4. 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가
         Date expiration = jwtUtil.extractExpiration(accessToken, false);
         long remainingValidity = expiration.getTime() - System.currentTimeMillis();
 
         if (remainingValidity > 0) {
             redisTemplate.opsForValue().set(accessToken, "logout", Duration.ofMillis(remainingValidity));
         }
-    }
-
-    // Request Header에서 토큰 정보 추출 ( "Bearer [token]" )
-    private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(JwtAuthFilter.AUTHORIZATION_HEADER);
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
     }
 
     /**

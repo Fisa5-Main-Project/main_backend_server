@@ -4,6 +4,9 @@ import com.know_who_how.main_server.auth.dto.*;
 import com.know_who_how.main_server.auth.service.SmsCertificationService;
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.dto.ErrorResponse;
+import com.know_who_how.main_server.global.exception.CustomException;
+import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -193,8 +196,21 @@ public class AuthController {
     })
     @PostMapping("/logout")
     public ApiResponse<String> logout(HttpServletRequest request, @Valid @RequestBody LogoutRequestDto requestDto) {
-        authService.logout(request, requestDto);
+        String accessToken = resolveToken(request);
+        if (accessToken == null) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN_FORMAT);
+        }
+        authService.logout(accessToken, requestDto);
         return ApiResponse.onSuccess("로그아웃이 완료되었습니다.");
+    }
+
+    // Request Header에서 토큰 정보 추출 ( "Bearer [token]" )
+    private String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader(JwtAuthFilter.AUTHORIZATION_HEADER);
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     @Operation(summary = "1-8. Access Token 재발급",
