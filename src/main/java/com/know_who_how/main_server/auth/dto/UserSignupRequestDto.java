@@ -15,7 +15,13 @@ public class UserSignupRequestDto {
     @NotBlank(message = "인증 ID는 필수 입력 항목입니다.")
     private String verificationId;
 
-    @Schema(description = "동의한 약관 목록")
+    @Schema(description = "동의한 약관 목록", example = """
+            [
+              { "termId": 1, "isAgreed": true },
+              { "termId": 2, "isAgreed": true },
+              { "termId": 3, "isAgreed": false }
+            ]
+            """)
     @NotNull(message = "약관 동의는 필수입니다.")
     private List<TermAgreementRequest> termAgreements;
 

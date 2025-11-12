@@ -6,6 +6,7 @@ import com.know_who_how.main_server.global.entity.Keyword.Keyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.Term.Term;
 import com.know_who_how.main_server.global.entity.Term.UserTerm;
+import com.know_who_how.main_server.global.entity.Token.RefreshToken; // New import
 import com.know_who_how.main_server.global.entity.User.Gender;
 import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import com.know_who_how.main_server.global.entity.User.User;
@@ -13,8 +14,12 @@ import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
-import com.know_who_how.main_server.user.repository.*;
-import jakarta.servlet.http.HttpServletRequest;
+import com.know_who_how.main_server.user.repository.KeywordRepository;
+import com.know_who_how.main_server.user.repository.RefreshTokenRepository; // New import
+import com.know_who_how.main_server.user.repository.TermRepository;
+import com.know_who_how.main_server.user.repository.UserKeywordRepository;
+import com.know_who_how.main_server.user.repository.UserRepository;
+import com.know_who_how.main_server.user.repository.UserTermRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,10 +31,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant; // New import
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional; // New import
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +48,7 @@ public class AuthService {
     private final UserTermRepository userTermRepository;
     private final KeywordRepository keywordRepository;
     private final UserKeywordRepository userKeywordRepository;
+    private final RefreshTokenRepository refreshTokenRepository; // New injection
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
@@ -120,12 +128,11 @@ public class AuthService {
 
     /**
      * 사용자 로그아웃을 처리합니다. (표준 방식 적용)
-     * 1. Request Header에서 Access Token 추출
-     * 2. Access Token에서 User ID 추출 (필터에서 이미 검증됨)
-     * 3. Redis의 Refresh Token과 대조 후 삭제
-     * 4. Access Token을 남은 유효기간만큼 블랙리스트에 추가
+     * 1. Access Token에서 User ID 추출 (필터에서 이미 검증됨)
+     * 2. RDB의 Refresh Token과 대조 후 삭제
+     * 3. Access Token을 남은 유효기간만큼 블랙리스트에 추가
      *
-     * @param request    HTTP 요청 객체
+     * @param accessToken Access Token
      * @param requestDto 로그아웃 요청 DTO (RefreshToken 포함)
      */
     @Transactional
@@ -133,16 +140,18 @@ public class AuthService {
         // 1. Access Token에서 UserId 추출 (만료 여부와 상관없이)
         Long userId = jwtUtil.extractUserId(accessToken, false);
 
-        // 2. Redis에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
-        String redisKey = "RT:" + userId;
-        Object storedToken = redisTemplate.opsForValue().get(redisKey);
+        // 2. RDB에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        RefreshToken storedRefreshToken = refreshTokenRepository.findByUser(user)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
 
-        if (storedToken == null || !storedToken.toString().equals(requestDto.getRefreshToken())) {
+        if (!storedRefreshToken.getTokenValue().equals(requestDto.getRefreshToken())) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        // 3. Redis에서 해당 유저의 Refresh Token 삭제
-        redisTemplate.delete(redisKey);
+        // 3. RDB에서 해당 유저의 Refresh Token 삭제
+        refreshTokenRepository.delete(storedRefreshToken);
 
         // 4. 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가
         Date expiration = jwtUtil.extractExpiration(accessToken, false);
@@ -179,10 +188,21 @@ public class AuthService {
         String accessToken = jwtUtil.createAccessToken(userId, authorities);
         String refreshToken = jwtUtil.createRefreshToken(userId);
 
-        // 5. Refresh Token을 Redis에 저장 (userId를 key로 사용)
-        Date refreshTokenExpiration = jwtUtil.extractExpiration(refreshToken, true);
-        Duration refreshDuration = Duration.ofMillis(refreshTokenExpiration.getTime() - System.currentTimeMillis());
-        redisTemplate.opsForValue().set("RT:" + userId, refreshToken, refreshDuration);
+        // 5. Refresh Token을 RDB에 저장 (기존 토큰이 있으면 업데이트, 없으면 새로 생성)
+        Instant expiryDate = jwtUtil.extractExpiration(refreshToken, true).toInstant();
+        Optional<RefreshToken> existingRefreshToken = refreshTokenRepository.findByUser(user);
+
+        if (existingRefreshToken.isPresent()) {
+            existingRefreshToken.get().updateToken(refreshToken, expiryDate);
+            refreshTokenRepository.save(existingRefreshToken.get());
+        } else {
+            RefreshToken newRefreshToken = RefreshToken.builder()
+                    .user(user)
+                    .tokenValue(refreshToken)
+                    .expiryDate(expiryDate)
+                    .build();
+            refreshTokenRepository.save(newRefreshToken);
+        }
 
         // 6. TokenResponseDto로 반환
         return TokenResponseDto.builder()
@@ -205,23 +225,27 @@ public class AuthService {
         // 2. Refresh Token에서 UserId 추출
         Long userId = jwtUtil.extractUserId(refreshToken, true);
 
-        // 3. Redis에 저장된 Refresh Token과 일치하는지 확인
-        String redisKey = "RT:" + userId;
-        Object storedToken = redisTemplate.opsForValue().get(redisKey);
-
-        if (storedToken == null || !storedToken.toString().equals(refreshToken)) {
-            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN); // 저장된 토큰이 없거나 일치하지 않음
-        }
-
-        // 4. 사용자 정보 조회 및 새로운 Access Token 생성
+        // 3. RDB에 저장된 Refresh Token과 일치하는지 확인
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        RefreshToken storedRefreshToken = refreshTokenRepository.findByUser(user)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
+
+        if (!storedRefreshToken.getTokenValue().equals(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        // 4. Refresh Token의 만료 여부 확인 (RDB에 저장된 expiryDate 사용)
+        if (storedRefreshToken.getExpiryDate().isBefore(Instant.now())) {
+            throw new CustomException(ErrorCode.TOKEN_EXPIRED);
+        }
+
+        // 5. 사용자 정보 조회 및 새로운 Access Token 생성
         List<String> authorities = user.getAuthorities().stream()
                 .map(grantedAuthority -> grantedAuthority.getAuthority())
                 .collect(Collectors.toList());
         String newAccessToken = jwtUtil.createAccessToken(userId, authorities);
 
-        // 5. 새로운 Access Token만 담아서 반환 (Refresh Token은 유지)
+        // 6. 새로운 Access Token만 담아서 반환 (Refresh Token은 유지)
         return TokenResponseDto.builder()
                 .grantType("Bearer")
                 .accessToken(newAccessToken)
