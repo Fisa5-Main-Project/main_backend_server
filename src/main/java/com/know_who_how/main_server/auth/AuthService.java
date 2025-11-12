@@ -1,9 +1,6 @@
 package com.know_who_how.main_server.auth;
 
-import com.know_who_how.main_server.auth.dto.LoginRequestDto;
-import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
-import com.know_who_how.main_server.auth.dto.TokenResponseDto;
-import com.know_who_how.main_server.auth.dto.UserSignupRequestDto;
+import com.know_who_how.main_server.auth.dto.*;
 import com.know_who_how.main_server.auth.service.SmsCertificationService;
 import com.know_who_how.main_server.global.entity.Keyword.Keyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
@@ -14,8 +11,10 @@ import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
 import com.know_who_how.main_server.user.repository.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -120,49 +119,53 @@ public class AuthService {
     }
 
     /**
-     * 사용자 로그아웃을 처리합니다.
-     * White-list 전략: Redis에서 사용자의 Refresh Token을 삭제합니다.
-     * 또한, 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가합니다.
+     * 사용자 로그아웃을 처리합니다. (표준 방식 적용)
+     * 1. Request Header에서 Access Token 추출
+     * 2. Access Token에서 User ID 추출 (필터에서 이미 검증됨)
+     * 3. Redis의 Refresh Token과 대조 후 삭제
+     * 4. Access Token을 남은 유효기간만큼 블랙리스트에 추가
      *
-     * @param accessToken     현재 사용중인 Access Token (Bearer 포함)
-     * @param refreshToken    무효화할 Refresh Token
+     * @param request    HTTP 요청 객체
+     * @param requestDto 로그아웃 요청 DTO (RefreshToken 포함)
      */
-    public void logout(String accessToken, String refreshToken) {
-        // 1. Access Token 유효성 검사 (Filter에서 이미 처리하지만, 추가적으로 수행 가능)
-        if (accessToken == null || !accessToken.startsWith("Bearer ")) {
+    @Transactional
+    public void logout(HttpServletRequest request, LogoutRequestDto requestDto) {
+        // 1. Access Token 추출
+        String accessToken = resolveToken(request);
+        if (accessToken == null) {
             throw new CustomException(ErrorCode.INVALID_TOKEN_FORMAT);
         }
-        String pureAccessToken = accessToken.substring(7);
-        jwtUtil.validateAccessToken(pureAccessToken);
 
-        // 2. 현재 사용자의 인증 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
-            throw new CustomException(ErrorCode.SECURITY_CONTEXT_NOT_FOUND);
-        }
-        String userId = authentication.getName();
+        // 2. Access Token에서 UserId 추출 (만료 여부와 상관없이)
+        Long userId = jwtUtil.extractUserId(accessToken, false);
 
         // 3. Redis에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
         String redisKey = "RT:" + userId;
         Object storedToken = redisTemplate.opsForValue().get(redisKey);
 
-        if (storedToken == null) {
-            throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT); // 이미 로그아웃 처리됨
-        }
-        if (!storedToken.toString().equals(refreshToken)) {
+        if (storedToken == null || !storedToken.toString().equals(requestDto.getRefreshToken())) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         // 4. Redis에서 해당 유저의 Refresh Token 삭제
         redisTemplate.delete(redisKey);
 
-        // 5. 현재 요청에 사용된 Access Token을 블랙리스트에 추가
-        Date expiration = jwtUtil.extractExpiration(pureAccessToken, false);
+        // 5. 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가
+        Date expiration = jwtUtil.extractExpiration(accessToken, false);
         long remainingValidity = expiration.getTime() - System.currentTimeMillis();
 
         if (remainingValidity > 0) {
-            redisTemplate.opsForValue().set(pureAccessToken, "logout", Duration.ofMillis(remainingValidity));
+            redisTemplate.opsForValue().set(accessToken, "logout", Duration.ofMillis(remainingValidity));
         }
+    }
+
+    // Request Header에서 토큰 정보 추출 ( "Bearer [token]" )
+    private String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader(JwtAuthFilter.AUTHORIZATION_HEADER);
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     /**
@@ -205,6 +208,43 @@ public class AuthService {
     }
 
     /**
+     * Access Token을 재발급합니다.
+     * @param refreshToken 재발급 요청에 사용될 Refresh Token
+     * @return 새로운 Access Token이 담긴 응답 DTO
+     */
+    @Transactional
+    public TokenResponseDto reissue(String refreshToken) {
+        // 1. Refresh Token 유효성 검증
+        jwtUtil.validateRefreshToken(refreshToken);
+
+        // 2. Refresh Token에서 UserId 추출
+        Long userId = jwtUtil.extractUserId(refreshToken, true);
+
+        // 3. Redis에 저장된 Refresh Token과 일치하는지 확인
+        String redisKey = "RT:" + userId;
+        Object storedToken = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedToken == null || !storedToken.toString().equals(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN); // 저장된 토큰이 없거나 일치하지 않음
+        }
+
+        // 4. 사용자 정보 조회 및 새로운 Access Token 생성
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        List<String> authorities = user.getAuthorities().stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .collect(Collectors.toList());
+        String newAccessToken = jwtUtil.createAccessToken(userId, authorities);
+
+        // 5. 새로운 Access Token만 담아서 반환 (Refresh Token은 유지)
+        return TokenResponseDto.builder()
+                .grantType("Bearer")
+                .accessToken(newAccessToken)
+                .refreshToken(refreshToken) // 기존 Refresh Token을 그대로 반환
+                .build();
+    }
+
+    /**
      * 아이디 중복 여부를 확인합니다.
      *
      * @param loginId 아이디
@@ -216,6 +256,20 @@ public class AuthService {
             throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
         }
         return "사용 가능한 아이디입니다.";
+    }
+
+    /**
+     * 전화번호 중복 여부를 확인합니다.
+     *
+     * @param phoneNum 전화번호
+     * @return 사용 가능 메시지 또는 예외 발생
+     */
+    @Transactional(readOnly = true)
+    public String checkPhoneNumDuplicate(String phoneNum) {
+        if (userRepository.findByPhoneNum(phoneNum).isPresent()) {
+            throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+        }
+        return "사용 가능한 전화번호입니다.";
     }
 
     @jakarta.annotation.PostConstruct

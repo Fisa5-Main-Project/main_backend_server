@@ -39,15 +39,20 @@ public class JwtUtil {
         if (jwtProperties.getSecret() == null) {
             throw new IllegalStateException("JWT secret cannot be null");
         }
+        if (jwtProperties.getRefreshSecret() == null) { // Refresh Secret null check
+            throw new IllegalStateException("JWT refresh secret cannot be null");
+        }
         // [임시 디버깅 로그] 설정된 토큰 유효기간 값을 확인합니다.
         log.info("Loaded Access Token Validity (seconds): {}", jwtProperties.getAccessTokenValidityInSeconds());
         log.info("Loaded Refresh Token Validity (seconds): {}", jwtProperties.getRefreshTokenValidityInSeconds());
 
-        // [수정] Base64로 인코딩된 시크릿 키를 디코딩하여 사용합니다.
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
-        Key key = Keys.hmacShaKeyFor(keyBytes);
-        this.accessKey = key;
-        this.refreshKey = key;
+        // Access Token Key
+        byte[] accessKeyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
+        this.accessKey = Keys.hmacShaKeyFor(accessKeyBytes);
+
+        // Refresh Token Key
+        byte[] refreshKeyBytes = Decoders.BASE64.decode(jwtProperties.getRefreshSecret());
+        this.refreshKey = Keys.hmacShaKeyFor(refreshKeyBytes);
     }
 
     // AccessToken - 일반 요청 인증용
@@ -123,7 +128,7 @@ public class JwtUtil {
                     .build()
                     .parseSignedClaims(token);
             return true;
-        } catch (SecurityException e) {
+        } catch (io.jsonwebtoken.security.SignatureException | SecurityException e) {
             log.error("JWT 서명 검증 실패", e);
             throw new CustomException(ErrorCode.INVALID_TOKEN_SIGNATURE);
         } catch (MalformedJwtException e) {
@@ -141,27 +146,36 @@ public class JwtUtil {
         }
     }
 
-    //  토큰에서 userId(subject) 추출
+    //  토큰에서 userId(subject) 추출 (만료된 토큰에서도 추출 가능하도록 수정)
     public Long extractUserId(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
-        Claims claims = Jwts.parser()
+        try {
+            return Long.parseLong(Jwts.parser()
                 .verifyWith((SecretKey) key)
                 .build()
                 .parseSignedClaims(token)
-                .getPayload();
-
-        return Long.parseLong(claims.getSubject());
+                .getPayload()
+                .getSubject());
+        } catch (ExpiredJwtException e) {
+            // 만료된 토큰의 경우에도 subject(userId)는 반환
+            return Long.parseLong(e.getClaims().getSubject());
+        }
     }
 
-    // 토큰에서 만료 시간 추출
+    // 토큰에서 만료 시간 추출 (만료된 토큰에서도 추출 가능하도록 수정)
     public Date extractExpiration(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
-        return Jwts.parser()
+        try {
+            return Jwts.parser()
                 .verifyWith((SecretKey) key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload()
                 .getExpiration();
+        } catch (ExpiredJwtException e) {
+            // 만료된 토큰의 경우에도 만료 시간은 반환
+            return e.getClaims().getExpiration();
+        }
     }
 
 }

@@ -44,6 +44,7 @@ public class SecurityConfig {
     // [신규] 인증이 필요 없는 API 경로 (v1 적용)
     private static final String[] AUTH_WHITELIST = {
             "/api/v1/auth/login",                   // 로그인
+            "/api/v1/auth/reissue",                 // 토큰 재발급
             "/api/v1/auth/signup/**",               // 회원가입 관련 모든 경로
             "/swagger-ui.html",                     // Swagger UI HTML
             "/swagger-ui/**",                       // Swagger UI (JS, CSS 등)
@@ -70,7 +71,8 @@ public class SecurityConfig {
                         .name(jwtSchemeName)
                         .type(SecurityScheme.Type.HTTP) // HTTP 방식
                         .scheme("bearer")
-                        .bearerFormat("JWT")); // 토큰 형식 지정
+                        .bearerFormat("JWT") // 토큰 형식 지정
+                        .description("Access Token 값만 입력해주세요. (예: eyJhbGci...) Bearer 접두사는 자동으로 추가됩니다."));
 
         return new OpenAPI()
                 .info(info)

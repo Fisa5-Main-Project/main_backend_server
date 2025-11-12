@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.know_who_how.main_server.auth.dto.SmsCertificationConfirmDto;
 import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
+import com.know_who_how.main_server.auth.dto.TestSmsResponseDto;
 import com.know_who_how.main_server.global.config.CoolSmsProperties;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
@@ -31,6 +32,7 @@ public class SmsCertificationService {
 
     private final CoolSmsProperties coolSmsProperties;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final com.know_who_how.main_server.user.repository.UserRepository userRepository; // UserRepository 주입
     private DefaultMessageService messageService;
 
     private static final Duration EXPIRATION_TIME = Duration.ofMinutes(5); // 5 minutes expiration
@@ -50,6 +52,11 @@ public class SmsCertificationService {
      * @return verificationId
      */
     public String sendSmsCertification(SmsCertificationRequestDto requestDto) {
+        // [추가] 전화번호 중복 확인
+        if (userRepository.findByPhoneNum(requestDto.getPhoneNum()).isPresent()) {
+            throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+        }
+
         String verificationId = UUID.randomUUID().toString();
         String certificationCode = createCertificationCode();
         Message message = new Message();
@@ -77,17 +84,22 @@ public class SmsCertificationService {
      * 실제 SMS는 발송하지 않습니다.
      *
      * @param requestDto SMS 인증 요청 DTO
-     * @return Map containing "verificationId" and "authCode"
+     * @return TestSmsResponseDto containing "verificationId" and "authCode"
      */
-    public Map<String, String> sendTestSmsCertification(SmsCertificationRequestDto requestDto) {
+    public TestSmsResponseDto sendTestSmsCertification(SmsCertificationRequestDto requestDto) {
+        // [추가] 전화번호 중복 확인
+        if (userRepository.findByPhoneNum(requestDto.getPhoneNum()).isPresent()) {
+            throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+        }
+
         String verificationId = UUID.randomUUID().toString();
-        String certificationCode = "123456"; // 고정된 테스트 인증번호
+        String certificationCode = "123456"; // /test-sms에서 쓰이는 테스트 코드(고정)
 
         try {
             SmsVerificationData data = new SmsVerificationData(certificationCode, requestDto, false);
             redisTemplate.opsForValue().set(verificationId, data, EXPIRATION_TIME);
             log.info("테스트용 SMS 인증 정보 생성 완료. verificationId: {}, authCode: {}", verificationId, certificationCode);
-            return Map.of("verificationId", verificationId, "authCode", certificationCode);
+            return new TestSmsResponseDto(verificationId, certificationCode);
         } catch (Exception e) {
             log.error("테스트용 SMS 인증 정보 생성 중 오류 발생", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
