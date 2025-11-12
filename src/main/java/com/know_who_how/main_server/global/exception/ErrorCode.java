@@ -30,7 +30,7 @@ public enum ErrorCode {
     INVALID_KEYWORD_VALUE(HttpStatus.BAD_REQUEST, "AUTH_002", "유효하지 않은 은퇴 키워드입니다."),
     REQUIRED_TERM_NOT_AGREED(HttpStatus.BAD_REQUEST, "AUTH_003", "필수 약관에 동의해야 합니다."),
     LOGIN_ID_DUPLICATE(HttpStatus.CONFLICT, "AUTH_004", "이미 사용 중인 아이디입니다."),
-    PHONE_NUM_DUPLICATE(HttpStatus.CONFLICT, "AUTH_005", "이미 등록된" + " 전화번호입니다."),
+    PHONE_NUM_DUPLICATE(HttpStatus.CONFLICT, "AUTH_005", "이미 등록된 전화번호입니다."),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "AUTH_006", "비밀번호와 비밀번호 확인이 일치하지 않습니다."),
     INVALID_CERTIFICATION_CODE(HttpStatus.BAD_REQUEST, "AUTH_007", "유효하지 않은 인증 코드입니다."),
     CERTIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH_008", "인증 코드가 만료되었습니다."),

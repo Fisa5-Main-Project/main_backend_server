@@ -8,7 +8,7 @@ import java.util.Objects;
 @NoArgsConstructor
 public class UserKeywordId implements Serializable {
 
-    private Integer user;
+    private Long user;
     private Long keyword;
 
     @Override

@@ -2,11 +2,12 @@ package com.know_who_how.main_server.auth;
 
 import com.know_who_how.main_server.auth.dto.*;
 import com.know_who_how.main_server.auth.service.SmsCertificationService;
+import com.know_who_how.main_server.global.config.RedisUtil; // New import
 import com.know_who_how.main_server.global.entity.Keyword.Keyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.Term.Term;
 import com.know_who_how.main_server.global.entity.Term.UserTerm;
-import com.know_who_how.main_server.global.entity.Token.RefreshToken; // New import
+import com.know_who_how.main_server.global.entity.Token.RefreshToken;
 import com.know_who_how.main_server.global.entity.User.Gender;
 import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import com.know_who_how.main_server.global.entity.User.User;
@@ -15,7 +16,7 @@ import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
 import com.know_who_how.main_server.user.repository.KeywordRepository;
-import com.know_who_how.main_server.user.repository.RefreshTokenRepository; // New import
+import com.know_who_how.main_server.user.repository.RefreshTokenRepository;
 import com.know_who_how.main_server.user.repository.TermRepository;
 import com.know_who_how.main_server.user.repository.UserKeywordRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
@@ -31,12 +32,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.Instant; // New import
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional; // New import
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,11 +49,12 @@ public class AuthService {
     private final UserTermRepository userTermRepository;
     private final KeywordRepository keywordRepository;
     private final UserKeywordRepository userKeywordRepository;
-    private final RefreshTokenRepository refreshTokenRepository; // New injection
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
-    private final SmsCertificationService smsCertificationService; // Inject SmsCertificationService
+    private final SmsCertificationService smsCertificationService;
+    private final RedisUtil redisUtil;
     private final RedisTemplate<String, Object> redisTemplate;
 
     /**

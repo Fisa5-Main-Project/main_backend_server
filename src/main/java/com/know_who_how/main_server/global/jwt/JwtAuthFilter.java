@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.global.jwt;
 
+import com.know_who_how.main_server.global.config.RedisUtil; // New import
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -24,7 +25,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
-    private final RedisTemplate<String, Object> redisTemplate; // RedisTemplate 주입
+    private final RedisUtil redisUtil; // Replaced RedisTemplate with RedisUtil
 
     // 헤더 이름
     public static final String AUTHORIZATION_HEADER = "Authorization";
@@ -39,7 +40,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             if (token != null) {
                 // Redis 블랙리스트 확인: 이미 로그아웃된 토큰인지 검사
-                if (redisTemplate.opsForValue().get(token) != null) {
+                if (redisUtil.get(token) != null) { // Use redisUtil.get
                     throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT);
                 }
 

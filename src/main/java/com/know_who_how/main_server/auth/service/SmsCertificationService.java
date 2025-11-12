@@ -6,6 +6,7 @@ import com.know_who_how.main_server.auth.dto.SmsCertificationConfirmDto;
 import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
 import com.know_who_how.main_server.auth.dto.TestSmsResponseDto;
 import com.know_who_how.main_server.global.config.CoolSmsProperties;
+import com.know_who_how.main_server.global.config.RedisUtil; // New import
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.solapi.sdk.SolapiClient;
@@ -31,7 +32,7 @@ import java.util.UUID;
 public class SmsCertificationService {
 
     private final CoolSmsProperties coolSmsProperties;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisUtil redisUtil; // Replaced RedisTemplate with RedisUtil
     private final com.know_who_how.main_server.user.repository.UserRepository userRepository; // UserRepository 주입
     private DefaultMessageService messageService;
 
@@ -67,7 +68,7 @@ public class SmsCertificationService {
         try {
             this.messageService.send(message);
             SmsVerificationData data = new SmsVerificationData(certificationCode, requestDto, false);
-            redisTemplate.opsForValue().set(verificationId, data, EXPIRATION_TIME);
+            redisUtil.save(verificationId, data, EXPIRATION_TIME); // Use redisUtil.save
             return verificationId;
         } catch (SolapiMessageNotReceivedException e) {
             log.error("SMS 전송 실패, 상세 정보: {}", e.getFailedMessageList());
@@ -97,7 +98,7 @@ public class SmsCertificationService {
 
         try {
             SmsVerificationData data = new SmsVerificationData(certificationCode, requestDto, false);
-            redisTemplate.opsForValue().set(verificationId, data, EXPIRATION_TIME);
+            redisUtil.save(verificationId, data, EXPIRATION_TIME); // Use redisUtil.save
             log.info("테스트용 SMS 인증 정보 생성 완료. verificationId: {}, authCode: {}", verificationId, certificationCode);
             return new TestSmsResponseDto(verificationId, certificationCode);
         } catch (Exception e) {
@@ -114,7 +115,7 @@ public class SmsCertificationService {
      */
     public String confirmSmsCertification(SmsCertificationConfirmDto confirmDto) {
         String verificationId = confirmDto.getVerificationId();
-        SmsVerificationData data = (SmsVerificationData) redisTemplate.opsForValue().get(verificationId);
+        SmsVerificationData data = (SmsVerificationData) redisUtil.get(verificationId); // Use redisUtil.get
 
         if (data == null) {
             throw new CustomException(ErrorCode.CERTIFICATION_CODE_NOT_FOUND);
@@ -126,13 +127,13 @@ public class SmsCertificationService {
 
         // 인증 성공 시, Redis에 저장된 데이터의 isConfirmed 상태를 true로 업데이트
         SmsVerificationData updatedData = new SmsVerificationData(data.getCertificationCode(), data.getUserData(), true);
-        redisTemplate.opsForValue().set(verificationId, updatedData, EXPIRATION_TIME);
+        redisUtil.save(verificationId, updatedData, EXPIRATION_TIME); // Use redisUtil.save
 
         return "인증번호가 일치합니다.";
     }
 
     public SmsCertificationRequestDto getUserVerificationData(String verificationId) {
-        SmsVerificationData data = (SmsVerificationData) redisTemplate.opsForValue().get(verificationId);
+        SmsVerificationData data = (SmsVerificationData) redisUtil.get(verificationId); // Use redisUtil.get
         if (data == null || !data.isConfirmed()) {
             throw new CustomException(ErrorCode.CERTIFICATION_CODE_NOT_FOUND); // 인증되지 않았거나 만료됨
         }
@@ -140,7 +141,7 @@ public class SmsCertificationService {
     }
 
     public void removeUserVerificationData(String verificationId) {
-        redisTemplate.delete(verificationId);
+        redisUtil.delete(verificationId); // Use redisUtil.delete
     }
 
     /**

@@ -8,7 +8,8 @@ INSERT INTO keyword (name, type) VALUES ('안정적 생활비', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('목돈 마련', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('비상금 확보', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('증여/상속', 'RETIREMENT');
-INSERT INTO keyword (name, type) VALUES ('대출 상환', 'RETIREMENT');
+INSERT INTO keyword (name, type) VALU
+    ES ('대출 상환', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('여행', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('가족/교류', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('고급 취미', 'RETIREMENT');

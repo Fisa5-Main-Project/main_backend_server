@@ -9,7 +9,7 @@ import java.util.Objects;
 @NoArgsConstructor
 public class UserTermId implements Serializable {
 
-    private Integer user;
+    private Long user;
     private Long term;
 
     // UserTermId 객체의 user 필드값 + term 필드 값 모두 같은지 비교
