@@ -12,7 +12,7 @@ services:
       - app-network
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.28.0-perl
     container_name: nginx
     restart: always
     ports:
