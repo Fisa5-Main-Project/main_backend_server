@@ -18,12 +18,17 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
-        // 유효한 자격증명을 제공하지 않고 접근하려 할 때 401
+        // 필터에서 발생한 예외를 request attribute에서 가져옴
+        ErrorCode errorCode = (ErrorCode) request.getAttribute("exception");
+
+        // 예외가 없는 경우, 일반적인 인증 실패로 처리
+        if (errorCode == null) {
+            errorCode = ErrorCode.NOT_LOGIN_USER;
+        }
+
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
-        // 에러 코드 401
-        ErrorCode errorCode = ErrorCode.NOT_LOGIN_USER;
         ApiResponse<?> errorResponse = ApiResponse.onFailure(errorCode.getCode(), errorCode.getMessage());
         String json = new ObjectMapper().writeValueAsString(errorResponse);
         response.getWriter().write(json);

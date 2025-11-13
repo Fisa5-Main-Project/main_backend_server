@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 public class JwtProperties {
 
     private String header;
-    private String accessSecret;
-    private String refreshSecret;
+    private String secret; // This will be for access token
+    private String refreshSecret; // New property for refresh token
     private long accessTokenValidityInSeconds;
     private long refreshTokenValidityInSeconds;
 
