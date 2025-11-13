@@ -46,6 +46,7 @@ public class SecurityConfig {
             "/api/v1/auth/login",                   // 로그인
             "/api/v1/auth/reissue",                 // 토큰 재발급
             "/api/v1/auth/signup/**",               // 회원가입 관련 모든 경로
+            "/login/oauth2/code/**",                // 소셜 로그인 콜백 경로
             "/swagger-ui.html",                     // Swagger UI HTML
             "/swagger-ui/**",                       // Swagger UI (JS, CSS 등)
             "/v3/api-docs/**",                      // OpenAPI 3.0 Docs

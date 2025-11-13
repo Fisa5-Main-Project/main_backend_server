@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,8 +20,7 @@ import java.util.stream.Collectors;
  */
 @Entity
 @Table(name = "users")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User implements UserDetails {
 
     @Id
@@ -56,12 +54,19 @@ public class User implements UserDetails {
     @Column(name = "investment_tendancy")
     private InvestmentTendancy investmentTendancy;
 
+    // === 소셜 로그인 연동 필드 ===
+    @Column(name = "provider")
+    private String provider; // OAuth2 제공자 (예: "kakao")
+
+    @Column(name = "provider_id", unique = true)
+    private String providerId; // OAuth2 제공자별 고유 ID
+
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, InvestmentTendancy investmentTendancy) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, InvestmentTendancy investmentTendancy, String provider, String providerId) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
@@ -69,7 +74,15 @@ public class User implements UserDetails {
         this.gender = gender;
         this.name = name;
         this.investmentTendancy = investmentTendancy;
+        this.provider = provider;
+        this.providerId = providerId;
         this.roles.add("ROLE_USER"); // 회원가입 시 기본 권한
+    }
+
+    // 소셜 로그인 정보를 업데이트하는 메서드
+    public void updateSocialInfo(String provider, String providerId) {
+        this.provider = provider;
+        this.providerId = providerId;
     }
 
     // === UserDetails 인터페이스 구현 메서드 ===

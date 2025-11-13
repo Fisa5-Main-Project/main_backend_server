@@ -64,6 +64,30 @@ public class AuthService {
      */
     @Transactional
     public void signup(UserSignupRequestDto requestDto) {
+        // === 소셜 로그인 연동 처리 (signupToken이 있는 경우) ===
+        String provider = null;
+        String providerId = null;
+        if (requestDto.getSignupToken() != null && !requestDto.getSignupToken().isBlank()) {
+            String redisKey = "oauth-sigup:" + requestDto.getSignupToken();
+            String redisValue = (String) redisUtil.get(redisKey);
+
+            if (redisValue == null) {
+                throw new CustomException(ErrorCode.SIGNUP_TOKEN_INVALID);
+            }
+
+            String[] socialInfo = redisValue.split(":");
+            provider = socialInfo[0];
+            providerId = socialInfo[1];
+
+            // 이미 해당 소셜 계정으로 가입된 유저가 있는지 최종 확인
+            if (userRepository.findByProviderAndProviderId(provider, providerId).isPresent()) {
+                throw new CustomException(ErrorCode.SOCIAL_ACCOUNT_ALREADY_REGISTERED);
+            }
+
+            // 사용 후 토큰 삭제
+            redisUtil.delete(redisKey);
+        }
+
         // 1. verificationId를 통해 SMS 인증 정보 조회
         SmsCertificationRequestDto smsRequestDto = smsCertificationService.getUserVerificationData(requestDto.getVerificationId());
 
@@ -100,6 +124,8 @@ public class AuthService {
                 .birth(birth)
                 .gender(gender)
                 .investmentTendancy(investmentTendancy)
+                .provider(provider) // 소셜 정보 추가
+                .providerId(providerId) // 소셜 정보 추가
                 .build();
         userRepository.save(newUser);
 

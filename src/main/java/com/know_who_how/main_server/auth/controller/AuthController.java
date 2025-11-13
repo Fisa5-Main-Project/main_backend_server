@@ -1,20 +1,23 @@
 package com.know_who_how.main_server.auth.controller;
 
-import com.know_who_how.main_server.auth.service.AuthService;
 import com.know_who_how.main_server.auth.dto.*;
+import com.know_who_how.main_server.auth.service.AuthService;
 import com.know_who_how.main_server.auth.service.SmsCertificationService;
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.dto.ErrorResponse;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
+import com.know_who_how.main_server.global.jwt.JwtProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -31,6 +34,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final SmsCertificationService smsCertificationService;
+    private final JwtProperties jwtProperties; // Added this
 
     @Operation(summary = "1-1. SMS 본인인증 문자 발송",
             description = """
@@ -127,25 +131,29 @@ public class AuthController {
 
     @Operation(summary = "1-5. 최종 회원가입",
             description = """
-                    **사용 시점:** 본인인증 및 모든 폼 입력이 완료된 후, 최종적으로 회원가입을 요청할 때 사용합니다.
+                    **두 가지 케이스에 사용되는 최종 회원가입 API입니다.**
                     
-                    **성공:** "회원가입이 완료되었습니다." 메시지를 반환합니다.
+                    **1. 일반 회원가입:**
+                    - `signupToken` 필드를 제외하고 요청을 보냅니다.
+                    
+                    **2. 소셜 로그인 후 추가 정보 입력:**
+                    - 카카오 로그인 후, `isNewUser: true` 응답과 함께 받은 `signupToken` 값을 반드시 포함하여 요청해야 합니다.
+                    - 이 토큰을 통해 카카오 계정과 새로 생성되는 서비스 계정이 연동됩니다.
                     
                     **실패:**
                     - `400 Bad Request`:
                         - 필수 약관 미동의 (AUTH_003)
-                        - 존재하지 않는 약관 ID (AUTH_001)
-                        - 유효하지 않은 키워드 (AUTH_002)
-                        - 비밀번호 불일치 (AUTH_006)
+                        - 유효하지 않은 `signupToken` (AUTH_016)
                         - 기타 DTO 유효성 검사 실패
                     - `409 Conflict`:
                         - 아이디 중복 (AUTH_004)
                         - 전화번호 중복 (AUTH_005)
+                        - 이미 연동된 소셜 계정 (AUTH_017)
                     """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "회원가입 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (필수 약관 미동의, 유효하지 않은 값 등)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "중복 오류 (아이디 또는 전화번호)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "중복 오류 (아이디, 전화번호, 소셜 계정)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/signup/submit")
     public ApiResponse<String> signup(@Valid @RequestBody UserSignupRequestDto requestDto) {
@@ -157,7 +165,9 @@ public class AuthController {
             description = """
                     **사용 시점:** 사용자가 아이디와 비밀번호로 로그인을 시도할 때 사용합니다.
                     
-                    **성공:** Access Token과 Refresh Token을 반환합니다.
+                    **성공:**
+                    - **응답 본문(Body):** Access Token 정보를 반환합니다.
+                    - **응답 헤더(Cookie):** Refresh Token이 `HttpOnly` 쿠키로 설정됩니다.
                     
                     **실패:**
                     - 아이디가 존재하지 않는 경우 `404 Not Found` (AUTH_015)
@@ -165,15 +175,35 @@ public class AuthController {
                     - DTO 유효성 검사 실패 시 `400 Bad Request`
                     """)
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공", content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공", content = @Content(schema = @Schema(implementation = AccessTokenResponseDto.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 누락)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (비밀번호 불일치)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "존재하지 않는 사용자", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/login")
-    public ApiResponse<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto) {
-        TokenResponseDto token = authService.login(requestDto);
-        return ApiResponse.onSuccess(token);
+    public ApiResponse<AccessTokenResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto, HttpServletResponse response) {
+        TokenResponseDto tokenDto = authService.login(requestDto);
+
+        // Refresh Token을 HttpOnly 쿠키에 설정
+        setRefreshTokenCookie(response, tokenDto.getRefreshToken());
+
+        // Access Token 정보만 DTO에 담아 Body로 반환
+        AccessTokenResponseDto accessTokenResponse = AccessTokenResponseDto.builder()
+                .grantType(tokenDto.getGrantType())
+                .accessToken(tokenDto.getAccessToken())
+                .build();
+
+        return ApiResponse.onSuccess(accessTokenResponse);
+    }
+
+    // Refresh Token을 쿠키에 설정하는 헬퍼 메서드
+    private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        Cookie cookie = new Cookie("refresh_token", refreshToken);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // HTTPS 환경에서만 전송
+        cookie.setPath("/"); // 모든 경로에서 쿠키 사용
+        cookie.setMaxAge((int) jwtProperties.getRefreshTokenValidityInSeconds()); // 초 단위
+        response.addCookie(cookie);
     }
 
     @Operation(summary = "1-7. 로그아웃",
@@ -218,25 +248,31 @@ public class AuthController {
             description = """
                     **사용 시점:** API 요청 시 Access Token 만료(401 Unauthorized, `TOKEN_EXPIRED` 코드) 응답을 받았을 때, 새로운 Access Token을 발급받기 위해 호출합니다.
                     
-                    **요청 방법:** **`X-Refresh-Token`** 이라는 커스텀 헤더에 Refresh Token을 담아 요청해야 합니다.
+                    **요청 방법:** 브라우저에 저장된 `refresh_token` 쿠키를 통해 자동으로 인증합니다. 클라이언트가 직접 헤더나 바디에 토큰을 담을 필요가 없습니다.
                     
-                    **성공:** 새로운 Access Token과 Refresh Token을 반환합니다.
+                    **성공:** 새로운 Access Token을 반환합니다.
                     
                     **실패:**
                     - `401 Unauthorized`:
-                        - Refresh Token이 만료되었거나 유효하지 않은 경우 (AUTH_013, JWT_004, JWT_005, JWT_006)
-                        - `X-Refresh-Token` 헤더가 없거나 토큰 형식이 잘못된 경우 (JWT_001, JWT_002, JWT_003, JWT_007)
+                        - Refresh Token이 만료되었거나 유효하지 않은 경우 (AUTH_013, JWT_004 등)
+                        - `refresh_token` 쿠키가 없는 경우
                     """)
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Access Token 재발급 성공", content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Access Token 재발급 성공", content = @Content(schema = @Schema(implementation = AccessTokenResponseDto.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (유효하지 않거나 만료된 Refresh Token)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/reissue")
-    public ApiResponse<TokenResponseDto> reissue(
-            @Parameter(description = "Refresh Token", required = true, example = "eyJhbGci...")
-            @RequestHeader("X-Refresh-Token") String refreshToken) {
+    public ApiResponse<AccessTokenResponseDto> reissue(
+            @CookieValue(name = "refresh_token") String refreshToken) {
         TokenResponseDto tokenResponseDto = authService.reissue(refreshToken);
-        return ApiResponse.onSuccess(tokenResponseDto);
+
+        // Access Token 정보만 DTO에 담아 Body로 반환
+        AccessTokenResponseDto accessTokenResponse = AccessTokenResponseDto.builder()
+                .grantType(tokenResponseDto.getGrantType())
+                .accessToken(tokenResponseDto.getAccessToken())
+                .build();
+
+        return ApiResponse.onSuccess(accessTokenResponse);
     }
 
     @Operation(summary = "1-1-1. 개발용) 테스트 SMS 인증 번호 전송",

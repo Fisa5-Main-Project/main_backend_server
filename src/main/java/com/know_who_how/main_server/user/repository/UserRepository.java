@@ -17,4 +17,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByPhoneNum(String phoneNum);
     Optional<User> findByPhoneNum(String phoneNum); // AuthService에서 사용
 
+    // OAuth2 로그인용
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
 }

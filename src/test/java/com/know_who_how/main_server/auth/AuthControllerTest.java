@@ -56,6 +56,9 @@ class AuthControllerTest {
     @MockBean
     private JwtAuthFilter jwtAuthFilter;
 
+    @MockBean
+    private JwtProperties jwtProperties;
+
     @BeforeEach
     void setUp() {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(wac)

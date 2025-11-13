@@ -43,4 +43,7 @@ public class UserSignupRequestDto {
     @Schema(description = "선택한 은퇴 키워드 ID 목록", example = "[1, 2, 3]")
     @NotNull(message = "키워드는 필수 선택 항목입니다.")
     private List<Long> keywordIds;
+
+    @Schema(description = "(소셜 로그인 시) 회원가입을 위한 임시 토큰", example = "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6")
+    private String signupToken;
 }
