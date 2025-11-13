@@ -68,7 +68,7 @@ public class AuthService {
         String provider = null;
         String providerId = null;
         if (requestDto.getSignupToken() != null && !requestDto.getSignupToken().isBlank()) {
-            String redisKey = "oauth-sigup:" + requestDto.getSignupToken();
+            String redisKey = "oauth-signup:" + requestDto.getSignupToken();
             String redisValue = (String) redisUtil.get(redisKey);
 
             if (redisValue == null) {
@@ -162,24 +162,29 @@ public class AuthService {
      * @param requestDto 로그아웃 요청 DTO (RefreshToken 포함)
      */
     @Transactional
-    public void logout(String accessToken, LogoutRequestDto requestDto) {
+    public void logout(String accessToken, String refreshToken) {
         // 1. Access Token에서 UserId 추출 (만료 여부와 상관없이)
         Long userId = jwtUtil.extractUserId(accessToken, false);
 
-        // 2. RDB에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
+        // 2. Refresh Token이 유효한지 확인 (null 또는 빈 값인 경우)
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 3. RDB에 저장된 Refresh Token과 전달받은 Refresh Token이 일치하는지 확인
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         RefreshToken storedRefreshToken = refreshTokenRepository.findByUser(user)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
 
-        if (!storedRefreshToken.getTokenValue().equals(requestDto.getRefreshToken())) {
+        if (!storedRefreshToken.getTokenValue().equals(refreshToken)) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        // 3. RDB에서 해당 유저의 Refresh Token 삭제
+        // 4. RDB에서 해당 유저의 Refresh Token 삭제
         refreshTokenRepository.delete(storedRefreshToken);
 
-        // 4. 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가
+        // 5. 현재 요청에 사용된 Access Token을 남은 유효시간만큼 블랙리스트에 추가
         Date expiration = jwtUtil.extractExpiration(accessToken, false);
         long remainingValidity = expiration.getTime() - System.currentTimeMillis();
 

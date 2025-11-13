@@ -210,29 +210,42 @@ public class AuthController {
             description = """
                     **사용 시점:** 사용자가 로그아웃을 요청할 때 사용합니다. **반드시 `Authorization` 헤더에 유효한 Access Token을 포함해야 합니다.**
                     
-                    **성공:** "로그아웃이 완료되었습니다." 메시지를 반환합니다.
+                    **성공:** "로그아웃이 완료되었습니다." 메시지를 반환하고, `refresh_token` 쿠키를 삭제합니다.
                     
                     **실패:**
                     - `400 Bad Request`:
                         - 이미 로그아웃 처리된 Access Token으로 다시 요청하는 경우 (AUTH_011)
-                        - DTO 유효성 검사 실패
                     - `401 Unauthorized`:
                         - `Authorization` 헤더가 없거나 토큰이 유효하지 않은 경우 (JWT_001, JWT_002, JWT_003, JWT_004, JWT_005, JWT_006, JWT_007)
-                        - 요청 Body의 Refresh Token이 유효하지 않은 경우 (AUTH_013)
+                        - `refresh_token` 쿠키가 유효하지 않은 경우 (AUTH_013)
                     """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (이미 로그아웃된 토큰, DTO 유효성 검사 실패)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (이미 로그아웃된 토큰)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (유효하지 않은 토큰)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/logout")
-    public ApiResponse<String> logout(HttpServletRequest request, @Valid @RequestBody LogoutRequestDto requestDto) {
+    public ApiResponse<String> logout(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) { // required = false로 설정하여 쿠키가 없을 경우 null 처리
         String accessToken = resolveToken(request);
         if (accessToken == null) {
             throw new CustomException(ErrorCode.INVALID_TOKEN_FORMAT);
         }
-        authService.logout(accessToken, requestDto);
+        authService.logout(accessToken, refreshToken);
+        deleteRefreshTokenCookie(response); // Refresh Token 쿠키 삭제
         return ApiResponse.onSuccess("로그아웃이 완료되었습니다.");
+    }
+
+    // Refresh Token 쿠키를 삭제하는 헬퍼 메서드
+    private void deleteRefreshTokenCookie(HttpServletResponse response) {
+        Cookie cookie = new Cookie("refresh_token", null); // 쿠키 값 null
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // Max-Age를 0으로 설정하여 즉시 만료
+        response.addCookie(cookie);
     }
 
     // Request Header에서 토큰 정보 추출 ( "Bearer [token]" )
