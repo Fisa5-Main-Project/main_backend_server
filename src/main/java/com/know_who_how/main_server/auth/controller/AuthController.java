@@ -1,5 +1,6 @@
-package com.know_who_how.main_server.auth;
+package com.know_who_how.main_server.auth.controller;
 
+import com.know_who_how.main_server.auth.service.AuthService;
 import com.know_who_how.main_server.auth.dto.*;
 import com.know_who_how.main_server.auth.service.SmsCertificationService;
 import com.know_who_how.main_server.global.dto.ApiResponse;

@@ -1,5 +1,5 @@
 package com.know_who_how.main_server.global.config;
-import com.know_who_how.main_server.auth.AuthRepository;
+import com.know_who_how.main_server.auth.repository.AuthRepository;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;

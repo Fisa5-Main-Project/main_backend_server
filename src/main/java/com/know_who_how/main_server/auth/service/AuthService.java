@@ -1,4 +1,4 @@
-package com.know_who_how.main_server.auth;
+package com.know_who_how.main_server.auth.service;
 
 import com.know_who_how.main_server.auth.dto.*;
 import com.know_who_how.main_server.auth.service.SmsCertificationService;
@@ -68,14 +68,12 @@ public class AuthService {
         SmsCertificationRequestDto smsRequestDto = smsCertificationService.getUserVerificationData(requestDto.getVerificationId());
 
         // 2. 아이디 중복 확인
-        if (userRepository.findByLoginId(requestDto.getLoginId()).isPresent()) {
-            throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
-        }
+        userRepository.findByLoginId(requestDto.getLoginId())
+                .ifPresent(user -> { throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE); });
 
         // 3. 전화번호 중복 확인 (SMS 인증 정보에서 가져온 전화번호 사용)
-        if (userRepository.findByPhoneNum(smsRequestDto.getPhoneNum()).isPresent()) {
-            throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
-        }
+        userRepository.findByPhoneNum(smsRequestDto.getPhoneNum())
+                .ifPresent(user -> { throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE); });
 
         // 4. 비밀번호 확인 (passwordConfirm 필드 제거로 인해 확인 로직 삭제)
 
@@ -263,9 +261,8 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public String checkLoginIdDuplicate(String loginId) {
-        if (userRepository.findByLoginId(loginId).isPresent()) {
-            throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
-        }
+        userRepository.findByLoginId(loginId)
+                .ifPresent(user -> { throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE); });
         return "사용 가능한 아이디입니다.";
     }
 
@@ -277,9 +274,8 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public String checkPhoneNumDuplicate(String phoneNum) {
-        if (userRepository.findByPhoneNum(phoneNum).isPresent()) {
-            throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
-        }
+        userRepository.findByPhoneNum(phoneNum)
+                .ifPresent(user -> { throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE); });
         return "사용 가능한 전화번호입니다.";
     }
 

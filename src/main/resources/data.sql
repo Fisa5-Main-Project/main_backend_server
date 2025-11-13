@@ -3,7 +3,7 @@ INSERT INTO term (is_required, term_name) VALUES (true, '서비스 이용약관'
 INSERT INTO term (is_required, term_name) VALUES (true, '개인정보 수집 및 이용 동의');
 INSERT INTO term (is_required, term_name) VALUES (false, '마케팅 정보 수신 동의');
 
--- Keyword (키워드) - All are of type RETIREMENT as per the spec for keywordIds
+-- Keyword (키워드)
 INSERT INTO keyword (name, type) VALUES ('안정적 생활비', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('목돈 마련', 'RETIREMENT');
 INSERT INTO keyword (name, type) VALUES ('비상금 확보', 'RETIREMENT');
