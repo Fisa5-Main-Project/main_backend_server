@@ -63,7 +63,7 @@ public class AuthService {
     @Transactional
     public void signup(UserSignupRequestDto requestDto) {
         // === 소셜 로그인 연동 처리 (signupToken이 있는 경우) ===
-        String provider = null;
+        String provider = "local"; // 일반 로그인 사용자의 기본 provider를 "local"로 설정
         String providerId = null;
         if (requestDto.getSignupToken() != null && !requestDto.getSignupToken().isBlank()) {
             String redisKey = "oauth-signup:" + requestDto.getSignupToken();
@@ -327,6 +327,7 @@ public class AuthService {
                     .birth(LocalDate.of(2001, 3, 24))
                     .gender(Gender.M)
                     .investmentTendancy(InvestmentTendancy.안정추구형)
+                    .assetTotal(30000000L) // 자산 3천만원 추가
                     .build();
             userRepository.save(testUser);
         }
