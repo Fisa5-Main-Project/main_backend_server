@@ -1,4 +1,4 @@
-package com.know_who_how.main_server.global.config;
+package com.know_who_how.main_server.global.util;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;

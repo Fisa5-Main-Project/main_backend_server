@@ -1,11 +1,11 @@
 package com.know_who_how.main_server.auth.oauth;
 
-import com.know_who_how.main_server.auth.dto.TokenResponseDto;
 import com.know_who_how.main_server.auth.oauth.dto.KakaoUserInfo;
-import com.know_who_how.main_server.auth.oauth.dto.OAuthLoginResponse;
-import com.know_who_how.main_server.global.config.RedisUtil;
+import com.know_who_how.main_server.auth.oauth.dto.OAuthResult;
+import com.know_who_how.main_server.global.util.RedisUtil;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
+import com.know_who_how.main_server.user.repository.RefreshTokenRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +22,7 @@ import org.springframework.web.reactive
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,8 +37,9 @@ public class OAuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    public Object oauthLogin(String registrationId, String code) {
+    public OAuthResult oauthLogin(String registrationId, String code) {
         // 1. registrationId를 통해 ClientRegistration 정보 가져오기
         ClientRegistration provider = clientRegistrationRepository.findByRegistrationId(registrationId);
 
@@ -85,7 +87,7 @@ public class OAuthService {
                 .block();
     }
 
-    private Object processKakaoUser(KakaoUserInfo kakaoUserInfo) {
+    private OAuthResult processKakaoUser(KakaoUserInfo kakaoUserInfo) {
         String provider = "kakao";
         String providerId = kakaoUserInfo.getProviderId();
 
@@ -99,10 +101,25 @@ public class OAuthService {
             // JWT 토큰 발급
             String accessToken = jwtUtil.createAccessToken(user.getUserId(), user.getRoles());
             String refreshToken = jwtUtil.createRefreshToken(user.getUserId());
-            // (실제 프로덕션에서는 Refresh Token을 DB나 Redis에 저장/업데이트해야 합니다)
 
-            // Controller에서 쿠키를 설정할 수 있도록 전체 TokenResponseDto 반환
-            return TokenResponseDto.builder()
+            // Refresh Token을 RDB에 저장/업데이트
+            Instant expiryDate = jwtUtil.extractExpiration(refreshToken, true).toInstant();
+            refreshTokenRepository.findByUser(user).ifPresentOrElse(
+                    existingToken -> {
+                        existingToken.updateToken(refreshToken, expiryDate);
+                        refreshTokenRepository.save(existingToken);
+                    },
+                    () -> {
+                        com.know_who_how.main_server.global.entity.Token.RefreshToken newRefreshToken = com.know_who_how.main_server.global.entity.Token.RefreshToken.builder()
+                                .user(user)
+                                .tokenValue(refreshToken)
+                                .expiryDate(expiryDate)
+                                .build();
+                        refreshTokenRepository.save(newRefreshToken);
+                    });
+
+            return OAuthResult.builder()
+                    .isNewUser(false)
                     .grantType("Bearer")
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
@@ -120,7 +137,7 @@ public class OAuthService {
             redisUtil.save(redisKey, redisValue, Duration.ofMinutes(10));
 
             // 3. 클라이언트에 signupToken 반환
-            return OAuthLoginResponse.builder()
+            return OAuthResult.builder()
                     .isNewUser(true)
                     .signupToken(signupToken)
                     .build();

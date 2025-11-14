@@ -9,6 +9,7 @@ import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtProperties;
+import com.know_who_how.main_server.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,7 +35,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final SmsCertificationService smsCertificationService;
-    private final JwtProperties jwtProperties; // Added this
+    private final CookieUtil cookieUtil; // Added this
 
     @Operation(summary = "1-1. SMS 본인인증 문자 발송",
             description = """
@@ -185,7 +186,7 @@ public class AuthController {
         TokenResponseDto tokenDto = authService.login(requestDto);
 
         // Refresh Token을 HttpOnly 쿠키에 설정
-        setRefreshTokenCookie(response, tokenDto.getRefreshToken());
+        cookieUtil.setRefreshTokenCookie(response, tokenDto.getRefreshToken());
 
         // Access Token 정보만 DTO에 담아 Body로 반환
         AccessTokenResponseDto accessTokenResponse = AccessTokenResponseDto.builder()
@@ -196,15 +197,7 @@ public class AuthController {
         return ApiResponse.onSuccess(accessTokenResponse);
     }
 
-    // Refresh Token을 쿠키에 설정하는 헬퍼 메서드
-    private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        Cookie cookie = new Cookie("refresh_token", refreshToken);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true); // HTTPS 환경에서만 전송
-        cookie.setPath("/"); // 모든 경로에서 쿠키 사용
-        cookie.setMaxAge((int) jwtProperties.getRefreshTokenValidityInSeconds()); // 초 단위
-        response.addCookie(cookie);
-    }
+
 
     @Operation(summary = "1-7. 로그아웃",
             description = """
@@ -234,19 +227,11 @@ public class AuthController {
             throw new CustomException(ErrorCode.INVALID_TOKEN_FORMAT);
         }
         authService.logout(accessToken, refreshToken);
-        deleteRefreshTokenCookie(response); // Refresh Token 쿠키 삭제
+        cookieUtil.deleteRefreshTokenCookie(response); // Refresh Token 쿠키 삭제
         return ApiResponse.onSuccess("로그아웃이 완료되었습니다.");
     }
 
-    // Refresh Token 쿠키를 삭제하는 헬퍼 메서드
-    private void deleteRefreshTokenCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("refresh_token", null); // 쿠키 값 null
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // Max-Age를 0으로 설정하여 즉시 만료
-        response.addCookie(cookie);
-    }
+
 
     // Request Header에서 토큰 정보 추출 ( "Bearer [token]" )
     private String resolveToken(HttpServletRequest request) {

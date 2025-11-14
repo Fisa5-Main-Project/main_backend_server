@@ -1,9 +1,7 @@
 package com.know_who_how.main_server.auth.service;
 
 import com.know_who_how.main_server.auth.dto.*;
-import com.know_who_how.main_server.auth.service.SmsCertificationService;
-import com.know_who_how.main_server.global.config.RedisUtil; // New import
-import com.know_who_how.main_server.global.entity.Keyword.Keyword;
+import com.know_who_how.main_server.global.util.RedisUtil; // New import
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.Term.Term;
 import com.know_who_how.main_server.global.entity.Term.UserTerm;
@@ -13,7 +11,6 @@ import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
-import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
 import com.know_who_how.main_server.user.repository.KeywordRepository;
 import com.know_who_how.main_server.user.repository.RefreshTokenRepository;
@@ -21,12 +18,12 @@ import com.know_who_how.main_server.user.repository.TermRepository;
 import com.know_who_how.main_server.user.repository.UserKeywordRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import com.know_who_how.main_server.user.repository.UserTermRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
@@ -132,9 +130,16 @@ public class AuthService {
         // 7. 약관 동의 저장
         List<UserTerm> userTerms = requestDto.getTermAgreements().stream()
                 .filter(ta -> ta.getIsAgreed()) // 동의한 약관만 저장
-                .map(ta -> termRepository.findById(ta.getTermId())
-                        .orElseThrow(() -> new CustomException(ErrorCode.TERM_NOT_FOUND)))
-                .map(term -> UserTerm.builder().user(newUser).term(term).build())
+                .map(ta -> {
+                    Term term = termRepository.findById(ta.getTermId())
+                            .orElseThrow(() -> new CustomException(ErrorCode.TERM_NOT_FOUND));
+                    return UserTerm.builder()
+                            .user(newUser)
+                            .term(term)
+                            .isAgreed(true)
+                            .agreedAt(LocalDateTime.now())
+                            .build();
+                })
                 .collect(Collectors.toList());
         userTermRepository.saveAll(userTerms);
 
@@ -159,7 +164,7 @@ public class AuthService {
      * 3. Access Token을 남은 유효기간만큼 블랙리스트에 추가
      *
      * @param accessToken Access Token
-     * @param requestDto 로그아웃 요청 DTO (RefreshToken 포함)
+     * @param refreshToken 로그아웃 요청 DTO (RefreshToken 포함)
      */
     @Transactional
     public void logout(String accessToken, String refreshToken) {
@@ -209,7 +214,7 @@ public class AuthService {
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
 
         // 3. 인증 성공 시 User 객체에서 정보 추출
-        com.know_who_how.main_server.global.entity.User.User user = (com.know_who_how.main_server.global.entity.User.User) authentication.getPrincipal();
+        User user = (User) authentication.getPrincipal();
         Long userId = user.getUserId().longValue();
         List<String> authorities = user.getAuthorities().stream()
                 .map(grantedAuthority -> grantedAuthority.getAuthority())
@@ -310,7 +315,7 @@ public class AuthService {
         return "사용 가능한 전화번호입니다.";
     }
 
-    @jakarta.annotation.PostConstruct
+    @PostConstruct
     @Transactional
     public void initTestUser() {
         if (userRepository.findByLoginId("testuser1").isEmpty()) {

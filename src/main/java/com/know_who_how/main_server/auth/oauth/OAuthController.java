@@ -1,12 +1,11 @@
 package com.know_who_how.main_server.auth.oauth;
 
-import com.know_who_how.main_server.auth.dto.AccessTokenResponseDto;
-import com.know_who_how.main_server.auth.dto.TokenResponseDto;
-import com.know_who_how.main_server.auth.oauth.dto.OAuthLoginResponse;
+import com.know_who_how.main_server.auth.oauth.dto.OAuthResult;
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.jwt.JwtProperties;
+import com.know_who_how.main_server.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -26,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class OAuthController {
 
     private final OAuthService oAuthService;
-    private final JwtProperties jwtProperties;
+    private final CookieUtil cookieUtil;
 
     @Operation(summary = "카카오 로그인 콜백 처리",
             description = """
@@ -34,11 +33,14 @@ public class OAuthController {
                     
                     카카오 로그인 성공 시, 카카오 서버가 사용자의 브라우저를 이 주소로 리다이렉트시킵니다.
                     백엔드는 리다이렉트 요청에 포함된 `code`(인가 코드)를 사용하여 로그인/회원가입 로직을 처리합니다.
+                    
+                    - **기존 회원**: `isNewUser: false`와 함께 `accessToken`을 반환하고, `refreshToken`은 `HttpOnly` 쿠키에 담아 전달합니다.
+                    - **신규 회원**: `isNewUser: true`와 함께 추가 정보 입력을 위한 `signupToken`을 반환합니다.
                     """)
     @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "소셜 로그인 처리 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = com.know_who_how.main_server.global.dto.ApiResponse.class),
+                            schema = @Schema(implementation = ApiResponse.class),
                             examples = {
                                     @ExampleObject(name = "기존 회원 로그인 성공",
                                             summary = "기존 회원 로그인 예시 (Access Token은 Body, Refresh Token은 HttpOnly 쿠키로 전달)",
@@ -47,10 +49,8 @@ public class OAuthController {
                                                       "isSuccess": true,
                                                       "data": {
                                                         "isNewUser": false,
-                                                        "tokenInfo": {
-                                                          "grantType": "Bearer",
-                                                          "accessToken": "eyJhbGciOiJIUzI1NiJ9..."
-                                                        }
+                                                        "grantType": "Bearer",
+                                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9..."
                                                       },
                                                       "error": null
                                                     }"""),
@@ -68,7 +68,7 @@ public class OAuthController {
                             })),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "소셜 로그인 실패 (사용자 취소 등)",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = com.know_who_how.main_server.global.dto.ApiResponse.class),
+                            schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(value = """
                                     {
                                       "isSuccess": false,
@@ -80,7 +80,7 @@ public class OAuthController {
                                     }""")))
     })
     @GetMapping("/{registrationId}")
-    public com.know_who_how.main_server.global.dto.ApiResponse<OAuthLoginResponse> oauth2Login(
+    public ApiResponse<OAuthResult> oauth2Login(
             @PathVariable String registrationId,
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error,
@@ -98,37 +98,16 @@ public class OAuthController {
         }
 
         log.info("카카오 로그인 콜백 요청 - registrationId: {}, code: {}", registrationId, code);
-        Object result = oAuthService.oauthLogin(registrationId, code);
+        OAuthResult result = oAuthService.oauthLogin(registrationId, code);
 
-        if (result instanceof TokenResponseDto) {
-            // 기존 회원인 경우
-            TokenResponseDto tokenDto = (TokenResponseDto) result;
-            setRefreshTokenCookie(response, tokenDto.getRefreshToken());
-
-            AccessTokenResponseDto accessTokenResponse = AccessTokenResponseDto.builder()
-                    .grantType(tokenDto.getGrantType())
-                    .accessToken(tokenDto.getAccessToken())
-                    .build();
-
-            OAuthLoginResponse loginResponse = OAuthLoginResponse.builder()
-                    .isNewUser(false)
-                    .tokenInfo(accessTokenResponse)
-                    .build();
-            
-            return com.know_who_how.main_server.global.dto.ApiResponse.onSuccess(loginResponse);
-
-        } else {
-            // 신규 회원인 경우
-            return com.know_who_how.main_server.global.dto.ApiResponse.onSuccess((OAuthLoginResponse) result);
+        // 응답 분기 처리
+        if (!result.getIsNewUser()) {
+            // 기존 회원: Refresh Token은 쿠키로, Access Token 등은 바디로 전달
+            cookieUtil.setRefreshTokenCookie(response, result.getRefreshToken());
         }
+
+        return ApiResponse.onSuccess(result);
     }
 
-    private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        Cookie cookie = new Cookie("refresh_token", refreshToken);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true); // HTTPS 환경에서만 전송
-        cookie.setPath("/"); // 모든 경로에서 쿠키 사용
-        cookie.setMaxAge((int) jwtProperties.getRefreshTokenValidityInSeconds()); // 초 단위
-        response.addCookie(cookie);
-    }
+
 }
