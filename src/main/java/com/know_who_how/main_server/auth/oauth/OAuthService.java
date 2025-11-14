@@ -120,7 +120,6 @@ public class OAuthService {
 
             return OAuthResult.builder()
                     .isNewUser(false)
-                    .grantType("Bearer")
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
                     .build();
