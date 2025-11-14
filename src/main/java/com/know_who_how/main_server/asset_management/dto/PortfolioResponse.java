@@ -9,8 +9,7 @@ import java.util.List;
 public record PortfolioResponse(
         GoalMetricsDto goalMetrics,
         CashFlowDto cashFlowDiagnostic,
-        PredictionDto prediction,
-        List<RecommendedProductDto> recommendedProducts
+        PredictionDto prediction
 ) {
     public record GoalMetricsDto(
             LocalDate goalTargetDate,

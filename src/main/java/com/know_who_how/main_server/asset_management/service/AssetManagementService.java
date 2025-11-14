@@ -5,11 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.know_who_how.main_server.asset_management.dto.PortfolioInfoRequest;
 import com.know_who_how.main_server.asset_management.dto.PortfolioResponse;
-import com.know_who_how.main_server.asset_management.dto.RecommendedProductDto;
 import com.know_who_how.main_server.global.entity.Asset.Asset;
 import com.know_who_how.main_server.global.entity.Asset.AssetType;
 import com.know_who_how.main_server.global.entity.Asset.FinancialProduct;
-import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.entity.User.UserInfo;
 import com.know_who_how.main_server.global.exception.CustomException;
@@ -89,25 +87,12 @@ public class AssetManagementService {
 
         PortfolioResponse.CashFlowDto cashFlowDiagnostic = createCashFlowDto(isSavingsType, monthlyNetSavings, idleCashAssets, recommendedMainProduct);
         PortfolioResponse.PredictionDto prediction = createPredictionDto(isSavingsType, monthlyNetSavings, idleCashAssets, goalMetrics.yearsLeft(), recommendedMainProduct);
-        List<RecommendedProductDto> recommendedProducts = getRecommendedProducts(user.getInvestmentTendancy());
 
-        return new PortfolioResponse(goalMetrics, cashFlowDiagnostic, prediction, recommendedProducts);
-    }
-
-    private List<RecommendedProductDto> getRecommendedProducts(InvestmentTendancy tendancy) {
-        // TODO: 현재는 모든 상품을 보여주지만, 향후 investmentTendancy를 사용하여 필터링해야 합니다.
-        return financialProductRepository.findAll().stream()
-                .map(fp -> new RecommendedProductDto(
-                        fp.getProductName(),
-                        fp.getProductType().toString(),
-                        (fp.getBaseInterestRate() != null ? "연 " + fp.getBaseInterestRate() + "%" : "기간별 차등"),
-                        fp.getBankName(),
-                        null))
-                .collect(Collectors.toList());
+        return new PortfolioResponse(goalMetrics, cashFlowDiagnostic, prediction);
     }
 
     private PortfolioResponse.GoalMetricsDto calculateGoalMetrics(UserInfo userInfo, List<Asset> assetsList) {
-        long totalAsset = assetsList.stream().map(Asset::getBalance).mapToLong(BigInteger::longValue).sum();
+        long totalAsset = userInfo.getUser().getAssetTotal() != null ? userInfo.getUser().getAssetTotal() : 0L;
         long totalLoan = calculateTotalAssetByType(assetsList, AssetType.LOAN);
         long netAsset = totalAsset - totalLoan;
 

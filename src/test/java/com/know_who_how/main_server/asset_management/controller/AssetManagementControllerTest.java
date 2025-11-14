@@ -106,13 +106,9 @@ class AssetManagementControllerTest {
         PortfolioResponse.PredictionDto prediction = new PortfolioResponse.PredictionDto(
                 "적금 시뮬레이션", 60000000L, 60, 65000000L, 5000000L
         );
-        List<RecommendedProductDto> recommendedProducts = List.of(
-                new RecommendedProductDto("우리 정기예금", "예적금", "연 3.5%", "우리은행", null)
-        );
-        PortfolioResponse mockResponse = new PortfolioResponse(goalMetrics, cashFlow, prediction, recommendedProducts);
+        PortfolioResponse mockResponse = new PortfolioResponse(goalMetrics, cashFlow, prediction);
 
         given(assetManagementService.getPortfolio(any(User.class))).willReturn(mockResponse);
-        given(mockUser.getInvestmentTendancy()).willReturn(InvestmentTendancy.CONSERVATIVE); // Mock User's tendancy
 
         // when & then
         mockMvc.perform(get("/api/v1/asset-management/portfolio")
@@ -121,7 +117,7 @@ class AssetManagementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.goalMetrics.goalAmount").value(100000000L))
-                .andExpect(jsonPath("$.data.recommendedProducts[0].productName").value("우리 정기예금"));
+                .andExpect(jsonPath("$.data.cashFlowDiagnostic.productName").value("KWH 월 저축형 상품"));
 
         then(assetManagementService).should().getPortfolio(any(User.class));
     }

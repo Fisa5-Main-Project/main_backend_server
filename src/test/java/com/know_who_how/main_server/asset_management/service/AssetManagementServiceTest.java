@@ -78,17 +78,16 @@ class AssetManagementServiceTest {
         given(mockUserInfo.getAnnualIncome()).willReturn(60000000L); // 연봉 6000만
         given(mockUserInfo.getFixedMonthlyCost()).willReturn(1000000L); // 월 고정비 100만
         // 월 순저축 여력 = 400만
+        given(mockUserInfo.getUser()).willReturn(mockUser);
+        given(mockUser.getAssetTotal()).willReturn(50000000L); // 총자산 5000만
         given(userInfoRepository.findByUser(mockUser)).willReturn(Optional.of(mockUserInfo));
-        given(assetsRepository.findByUser(mockUser)).willReturn(new ArrayList<>()); // 자산 0
-        given(mockUser.getInvestmentTendancy()).willReturn(InvestmentTendancy.CONSERVATIVE);
+        given(assetsRepository.findByUser(mockUser)).willReturn(new ArrayList<>()); // 부채 0
 
         String depositProductJson = "{\"tiers\": [{\"months_gte\": 12, \"months_lt\": 13, \"rate\": 2.80}]}";
         FinancialProduct depositProduct = FinancialProduct.builder()
                 .productName("WON플러스 예금").productType(FinancialProduct.ProductType.DEPOSIT)
                 .interestRateDetails(depositProductJson).build();
         given(financialProductRepository.findByProductName("WON플러스 예금")).willReturn(Optional.of(depositProduct));
-        given(financialProductRepository.findAll()).willReturn(List.of(depositProduct));
-
 
         // when
         PortfolioResponse response = assetManagementService.getPortfolio(mockUser);
@@ -97,6 +96,7 @@ class AssetManagementServiceTest {
         assertThat(response.cashFlowDiagnostic().diagnosticType()).isEqualTo("목돈 예치형");
         assertThat(response.cashFlowDiagnostic().productName()).isEqualTo("WON플러스 예금");
         assertThat(response.prediction().predictionType()).isEqualTo("예금 시뮬레이션");
+        assertThat(response.goalMetrics().totalAsset()).isEqualTo(50000000L);
     }
 
 
