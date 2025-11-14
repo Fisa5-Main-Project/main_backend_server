@@ -19,7 +19,4 @@ public class Keyword {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private KeywordType type;
 }

@@ -10,6 +10,8 @@ import com.know_who_how.main_server.auth.service.SmsCertificationService;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
+import com.know_who_how.main_server.global.jwt.JwtProperties;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +58,9 @@ class AuthControllerTest {
 
     @MockBean
     private JwtAuthFilter jwtAuthFilter;
+
+    @MockBean
+    private JwtProperties jwtProperties;
 
     @BeforeEach
     void setUp() {
@@ -99,30 +105,28 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("로그아웃_should_성공_when_유효한-리프레시-토큰")
+    @DisplayName("로그아웃 - 성공")
     @WithMockUser
     void logout_should_ReturnSuccess_when_ValidRequest() throws Exception {
         // given
-        // LogoutRequestDto has no setter, so create json manually.
-        String jsonRequest = "{\"refreshToken\": \"valid-refresh-token\"}";
+        String accessToken = "dummy-access-token";
+        String refreshToken = "dummy-refresh-token";
 
-        willDoNothing().given(authService).logout(any(), any());
+        willDoNothing().given(authService).logout(any(String.class), any(String.class));
 
         // when
         ResultActions resultActions = mockMvc.perform(post("/api/v1/auth/logout")
-                .header("Authorization", "Bearer dummy-access-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonRequest));
+                .header("Authorization", "Bearer " + accessToken)
+                .cookie(new Cookie("refresh_token", refreshToken))); // Simulate browser sending HttpOnly cookie
 
         // then
         MvcResult result = resultActions
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.data").value("로그아웃이 완료되었습니다."))
+                .andExpect(cookie().exists("refresh_token")) // Check that the cookie is present (for deletion instruction)
+                .andExpect(cookie().maxAge("refresh_token", 0)) // Verify Max-Age is 0 for deletion
                 .andReturn();
-
-        String responseBody = result.getResponse().getContentAsString();
-        String dataValue = objectMapper.readTree(responseBody).get("data").asText();
-        assertThat(dataValue).isEqualTo("로그아웃이 완료되었습니다.");
     }
 
     @Test
@@ -177,6 +181,7 @@ class AuthControllerTest {
                 .build();
 
         given(authService.login(any(LoginRequestDto.class))).willReturn(tokenResponseDto);
+        given(jwtProperties.getRefreshTokenValidityInSeconds()).willReturn(604800L); // Mock the TTL for cookie
 
         // when
         ResultActions resultActions = mockMvc.perform(post("/api/v1/auth/login")
@@ -188,6 +193,12 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.grantType").value("Bearer"))
                 .andExpect(jsonPath("$.data.accessToken").value("dummy-access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("dummy-refresh-token"));
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist()) // Verify refresh token is not in body
+                .andExpect(cookie().exists("refresh_token"))
+                .andExpect(cookie().httpOnly("refresh_token", true))
+                .andExpect(cookie().secure("refresh_token", true))
+                .andExpect(cookie().path("refresh_token", "/"))
+                .andExpect(cookie().maxAge("refresh_token", 604800))
+                .andExpect(cookie().value("refresh_token", "dummy-refresh-token"));
     }
 }

@@ -6,7 +6,7 @@ import com.know_who_how.main_server.auth.dto.SmsCertificationConfirmDto;
 import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
 import com.know_who_how.main_server.auth.dto.TestSmsResponseDto;
 import com.know_who_how.main_server.global.config.CoolSmsProperties;
-import com.know_who_how.main_server.global.config.RedisUtil; // New import
+import com.know_who_how.main_server.global.util.RedisUtil; // New import
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.solapi.sdk.SolapiClient;
@@ -17,13 +17,11 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
