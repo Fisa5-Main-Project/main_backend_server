@@ -66,13 +66,14 @@ public class User implements UserDetails {
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, InvestmentTendancy investmentTendancy, String provider, String providerId) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
         this.birth = birth;
         this.gender = gender;
         this.name = name;
+        this.assetTotal = assetTotal;
         this.investmentTendancy = investmentTendancy;
         this.provider = provider;
         this.providerId = providerId;
