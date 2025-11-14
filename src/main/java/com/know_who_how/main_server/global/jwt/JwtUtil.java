@@ -19,6 +19,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,20 +36,38 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() throws Exception {
-        if (jwtProperties.getAccessSecret() == null || jwtProperties.getRefreshSecret() == null) {
-            throw new IllegalStateException("JWT secrets cannot be null");
+        if (jwtProperties.getSecret() == null) {
+            throw new IllegalStateException("JWT secret cannot be null");
         }
-        // HMAC-SHA 키 생성을 위해 Base64 디코딩
-        this.accessKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.getAccessSecret()));
-        this.refreshKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.getRefreshSecret()));
+        if (jwtProperties.getRefreshSecret() == null) { // Refresh Secret null check
+            throw new IllegalStateException("JWT refresh secret cannot be null");
+        }
+        // [임시 디버깅 로그] 설정된 토큰 유효기간 값을 확인합니다.
+        log.info("Loaded Access Token Validity (seconds): {}", jwtProperties.getAccessTokenValidityInSeconds());
+        log.info("Loaded Refresh Token Validity (seconds): {}", jwtProperties.getRefreshTokenValidityInSeconds());
+
+        // Access Token Key
+        byte[] accessKeyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
+        this.accessKey = Keys.hmacShaKeyFor(accessKeyBytes);
+
+        // Refresh Token Key
+        byte[] refreshKeyBytes = Decoders.BASE64.decode(jwtProperties.getRefreshSecret());
+        this.refreshKey = Keys.hmacShaKeyFor(refreshKeyBytes);
     }
 
     // AccessToken - 일반 요청 인증용
     public String createAccessToken(Long userId, List<String> authorities) {
+        long now = System.currentTimeMillis();
+        long validity = jwtProperties.getAccessTokenValidityInSeconds() * 1000L;
+        Date expiration = new Date(now + validity);
+
+        // [임시 디버깅 로그] 토큰 생성 시 사용되는 만료 시간 값을 확인합니다.
+        log.info("Creating Access Token. Now: {}, Validity: {}ms, Expiration: {}", new Date(now), validity, expiration);
+
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .claim("authorities", String.join(",", authorities))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessTokenValidityInSeconds() * 1000L))
+                .setExpiration(expiration)
                 .signWith(accessKey, SignatureAlgorithm.HS512)
                 .compact();
     }
@@ -105,49 +124,58 @@ public class JwtUtil {
 
         try {
             Jwts.parser()
-                    .setSigningKey(key)
+                    .verifyWith((SecretKey) key)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
-        } catch (SecurityException e) {
-            log.info("JWT 서명 검증 실패");
+        } catch (io.jsonwebtoken.security.SignatureException | SecurityException e) {
+            log.error("JWT 서명 검증 실패", e);
             throw new CustomException(ErrorCode.INVALID_TOKEN_SIGNATURE);
         } catch (MalformedJwtException e) {
-            log.warn("JWT 형식 오류");
+            log.error("JWT 형식 오류", e);
             throw new CustomException(ErrorCode.MALFORMED_TOKEN_ERROR);
         } catch (ExpiredJwtException e) {
-            log.info("JWT 만료");
+            log.error("JWT 만료", e);
             throw new CustomException(ErrorCode.TOKEN_EXPIRED);
         } catch (UnsupportedJwtException e) {
-            log.info("지원되지 않는 JWT 토큰 형식");
+            log.error("지원되지 않는 JWT 토큰 형식", e);
             throw new CustomException(ErrorCode.UNSUPPORTED_TOKEN_ERROR);
         } catch (IllegalArgumentException e) {
-            log.warn("JWT 파싱 실패 - 비어있는 토큰 등");
+            log.error("JWT 파싱 실패 - 비어있는 토큰 등", e);
             throw new CustomException(ErrorCode.TOKEN_PARSING_FAILED);
         }
     }
 
-    //  토큰에서 userId(subject) 추출
+    //  토큰에서 userId(subject) 추출 (만료된 토큰에서도 추출 가능하도록 수정)
     public Long extractUserId(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
-        Claims claims = Jwts.parser() // [수정됨] parserBuilder() 아님
-                .setSigningKey(key)
+        try {
+            return Long.parseLong(Jwts.parser()
+                .verifyWith((SecretKey) key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-        return Long.parseLong(claims.getSubject());
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject());
+        } catch (ExpiredJwtException e) {
+            // 만료된 토큰의 경우에도 subject(userId)는 반환
+            return Long.parseLong(e.getClaims().getSubject());
+        }
     }
 
-    // 토큰에서 만료 시간 추출
+    // 토큰에서 만료 시간 추출 (만료된 토큰에서도 추출 가능하도록 수정)
     public Date extractExpiration(String token, boolean isRefresh) {
         Key key = isRefresh ? refreshKey : accessKey;
-        return Jwts.parser()
-                .setSigningKey(key)
+        try {
+            return Jwts.parser()
+                .verifyWith((SecretKey) key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody()
+                .parseSignedClaims(token)
+                .getPayload()
                 .getExpiration();
+        } catch (ExpiredJwtException e) {
+            // 만료된 토큰의 경우에도 만료 시간은 반환
+            return e.getClaims().getExpiration();
+        }
     }
 
 }

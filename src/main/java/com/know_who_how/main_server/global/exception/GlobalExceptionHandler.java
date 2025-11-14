@@ -4,12 +4,29 @@ import com.know_who_how.main_server.global.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Spring Security의 BadCredentialsException (비밀번호 불일치)을 처리합니다.
+     *
+     * @param e BadCredentialsException
+     * @return INVALID_PASSWORD 에러 응답
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleBadCredentialsException(BadCredentialsException e) {
+        log.warn("BadCredentialsException: {}", e.getMessage());
+        ErrorCode errorCode = ErrorCode.INVALID_PASSWORD;
+        return new ResponseEntity<>(
+                ApiResponse.onFailure(errorCode.getCode(), errorCode.getMessage()),
+                errorCode.getStatus()
+        );
+    }
 
     /**
      * 서비스 로직에서 발생하는 모든 CustomException을 처리합니다.

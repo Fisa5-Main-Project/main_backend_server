@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.global.jwt;
 
+import com.know_who_how.main_server.global.util.RedisUtil; // New import
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -23,6 +24,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
+    private final RedisUtil redisUtil; // Replaced RedisTemplate with RedisUtil
 
     // 헤더 이름
     public static final String AUTHORIZATION_HEADER = "Authorization";
@@ -32,12 +34,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // Request Header에서 토큰 추출
         String token = resolveToken(request);
 
         try {
             if (token != null) {
-                // JwtUtil의 validateAccessToken이 실패 시 CustomException을 던짐
+                // Redis 블랙리스트 확인: 이미 로그아웃된 토큰인지 검사
+                if (redisUtil.get(token) != null) { // Use redisUtil.get
+                    throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT);
+                }
+
+                // 토큰 검증
                 jwtUtil.validateAccessToken(token);
 
                 // 인증 정보 SecurityContext에 저장
@@ -45,13 +51,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (CustomException e) {
-            // JwtUtil에서 발생한 CustomException 처리
-            log.warn("JWT authentication failed: {}", e.getMessage());
             request.setAttribute("exception", e.getErrorCode());
-        } catch (Exception e) {
-            // 알 수 없는 예외 처리
-            log.error("Unexpected error during JWT authentication: {}", e.getMessage(), e);
-            request.setAttribute("exception", ErrorCode.TOKEN_PARSING_FAILED); // (임시 에러 코드)
+        } catch (SecurityException | MalformedJwtException e) {
+            request.setAttribute("exception", ErrorCode.INVALID_TOKEN_SIGNATURE);
+        } catch (ExpiredJwtException e) {
+            request.setAttribute("exception", ErrorCode.TOKEN_EXPIRED);
+        } catch (UnsupportedJwtException e) {
+            request.setAttribute("exception", ErrorCode.UNSUPPORTED_TOKEN_ERROR);
+        } catch (IllegalArgumentException e) {
+            request.setAttribute("exception", ErrorCode.TOKEN_PARSING_FAILED);
         }
 
         filterChain.doFilter(request, response);

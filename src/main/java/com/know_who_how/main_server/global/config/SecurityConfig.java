@@ -4,6 +4,11 @@ import com.know_who_how.main_server.global.jwt.JwtAccessDeniedHandler;
 import com.know_who_how.main_server.global.jwt.JwtAuthEntryPoint;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.global.jwt.JwtUtil;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,9 +38,49 @@ public class SecurityConfig {
 
     private final JwtAuthEntryPoint jwtAuthEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    private final JwtAuthFilter jwtAuthFilter; // JwtAuthFilter 주입
     private final JwtUtil jwtUtil;
 
-    // PasswordEncoder 빈 등록
+    // [신규] 인증이 필요 없는 API 경로 (v1 적용)
+    private static final String[] AUTH_WHITELIST = {
+            "/api/v1/auth/login",                   // 로그인
+            "/api/v1/auth/reissue",                 // 토큰 재발급
+            "/api/v1/auth/signup/**",               // 회원가입 관련 모든 경로
+            "/login/oauth2/code/**",                // 소셜 로그인 콜백 경로
+            "/swagger-ui.html",                     // Swagger UI HTML
+            "/swagger-ui/**",                       // Swagger UI (JS, CSS 등)
+            "/v3/api-docs/**",                      // OpenAPI 3.0 Docs
+            "/v1/api-docs/**",                      // Swagger API Docs (application.yml 설정)
+            "/webjars/**",                          // Swagger UI Webjars
+            "/error"
+    };
+
+    @Bean
+    public OpenAPI openAPI() {
+        Info info = new Info()
+                .title("KnowWhoHow API Docs")
+                .version("v1.0.0")
+                .description("KnowWhoHow 프로젝트의 API 명세서입니다.");
+
+        // Security Scheme 이름
+        String jwtSchemeName = "Bearer Authentication";
+        // API 요청 헤더에 인증 정보 포함
+        SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
+        // SecuritySchemes 등록
+        Components components = new Components()
+                .addSecuritySchemes(jwtSchemeName, new SecurityScheme()
+                        .name(jwtSchemeName)
+                        .type(SecurityScheme.Type.HTTP) // HTTP 방식
+                        .scheme("bearer")
+                        .bearerFormat("JWT") // 토큰 형식 지정
+                        .description("Access Token 값만 입력해주세요. (예: eyJhbGci...) Bearer 접두사는 자동으로 추가됩니다."));
+
+        return new OpenAPI()
+                .info(info)
+                .addSecurityItem(securityRequirement)
+                .components(components);
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -44,41 +89,28 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // 정의한 CORS 설정을 Security Filter Chain에 적용
-
-                .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화 (stateless 세션 사용 시)
-                .formLogin(AbstractHttpConfigurer::disable) // 폼 기반 로그인 비활성화
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 적용
+                .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화
+                .formLogin(AbstractHttpConfigurer::disable) // 폼 로그인 비활성화
                 .httpBasic(AbstractHttpConfigurer::disable) // HTTP 기본 인증 비활성화
 
-                // 세션 관리 정책 설정
                 .sessionManagement(session ->
-                        // 세션을 생성하거나 사용하지 않도록 설정 (STATELESS)
-                        // 모든 요청은 인증 정보(JWT)를 포함
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 세션 사용 안 함
                 )
 
-                // 예외 처리 핸들러 설정
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(jwtAuthEntryPoint)    // 401 (인증 실패) (예: 유효하지 않은 토큰, 토큰 없음 등)
-                        .accessDeniedHandler(jwtAccessDeniedHandler)    // 403 (권한 없음) (예: 인증은 되었으나, 해당 리소스에 접근 권한이 없음)
+                        .authenticationEntryPoint(jwtAuthEntryPoint)    // 401 (인증 실패)
+                        .accessDeniedHandler(jwtAccessDeniedHandler)    // 403 (권한 없음)
                 )
 
-                // HTTP 요청별 권한 설정
+                // [수정] v1 경로를 AUTH_WHITELIST로 통합
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers(
-                                "/api/v1/auth/login",     // 로그인
-                                "/user/signup",    // 회원가입
-                                "/user/**/exists-id", // 아이디 중복 확인
-                                "/user/**/exists-phonenum", // 전화번호 중복 확인
-                                "/public/**",          // 정적 리소스 등
-                                "/error"
-                        ).permitAll()
-                        // 위의 경로 외에는 인증 되어야 함
-                        .anyRequest().authenticated()
+                        .requestMatchers(AUTH_WHITELIST).permitAll() // AUTH_WHITELIST 경로는 모두 허용
+                        .anyRequest().authenticated() // 나머지 모든 경로는 인증 필요
                 )
 
-                // 사용자 정의 필터 추가
-                .addFilterBefore(new JwtAuthFilter(jwtUtil),
+                // [유지] 사용자가 제공한 JwtAuthFilter 사용
+                .addFilterBefore(jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -87,14 +119,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // FE 주소 정해지면 추가
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(List.of("*")); // 현재 JWT 방식이기에 자격증명 사용 안함
-        configuration.setAllowCredentials(false);
+
+        // FE 주소 정해지면 추가
+        configuration.setAllowedOrigins(List.of("*"));
+
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(false); // JWT 토큰 사용 시, 자격증명(쿠키 등) 불필요
+        configuration.setMaxAge(3600L); // Preflight 요청 캐시 시간 (1시간)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", configuration); // 모든 경로에 이 CORS 설정 적용
         return source;
     }
-
 }
