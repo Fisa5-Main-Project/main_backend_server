@@ -46,7 +46,10 @@ public enum ErrorCode {
     OAUTH_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH_018", "소셜 로그인에 실패했습니다."),
 
     // portfolio exception
-    USER_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "PORTFOLIO_001", "사용자의 재무 설문 정보가 없습니다. 설문 등록을 먼저 완료해주세요.");
+    USER_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "PORT_001","사용자의 재무 정보를 찾을 수 없습니다."),
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PORT_002","해당 금융 상품을 찾을 수 없습니다."),
+
+    ;
 
 
     private final HttpStatus status;    // HTTP 상태

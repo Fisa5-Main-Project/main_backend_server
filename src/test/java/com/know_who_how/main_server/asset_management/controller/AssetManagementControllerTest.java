@@ -3,10 +3,8 @@ package com.know_who_how.main_server.asset_management.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.know_who_how.main_server.asset_management.dto.PortfolioInfoRequest;
 import com.know_who_how.main_server.asset_management.dto.PortfolioResponse;
-import com.know_who_how.main_server.asset_management.dto.RecommendedProductDto;
 import com.know_who_how.main_server.asset_management.service.AssetManagementService;
 import com.know_who_how.main_server.global.entity.User.User;
-import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +18,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -44,15 +41,11 @@ class AssetManagementControllerTest {
     private AssetManagementService assetManagementService;
 
     @MockBean
-    private User mockUser;
+    private com.know_who_how.main_server.global.jwt.JwtUtil jwtUtil;
 
-    @BeforeEach
-    void setUp() {
-        // @AuthenticationPrincipal User user를 모킹하기 위함
-        // 실제 User 객체의 필드를 사용해야 하는 경우, mockUser에 해당 필드를 설정해야 합니다.
-        // 예: given(mockUser.getInvestmentTendancy()).willReturn(InvestmentTendancy.MODERATE);
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(mockUser, ""));
-    }
+    @MockBean
+    private com.know_who_how.main_server.global.util.RedisUtil redisUtil;
+
 
     @Test
     @DisplayName("[성공] 유효한 요청 시, 재무 설문 정보 저장 후 201 Created 반환")

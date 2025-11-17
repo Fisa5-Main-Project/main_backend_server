@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.know_who_how.main_server.asset_management.dto.PortfolioInfoRequest;
 import com.know_who_how.main_server.asset_management.dto.PortfolioResponse;
 import com.know_who_how.main_server.global.entity.Asset.FinancialProduct;
-import com.know_who_how.main_server.global.entity.User.InvestmentTendancy;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.entity.User.UserInfo;
 import com.know_who_how.main_server.global.exception.CustomException;
@@ -12,7 +11,6 @@ import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.user.repository.AssetsRepository;
 import com.know_who_how.main_server.user.repository.FinancialProductRepository;
 import com.know_who_how.main_server.user.repository.UserInfoRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,10 +19,8 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +41,10 @@ class AssetManagementServiceTest {
     private AssetsRepository assetsRepository;
     @Mock
     private FinancialProductRepository financialProductRepository;
+    @Mock
+    private com.know_who_how.main_server.user.repository.UserRepository userRepository;
+    @Mock
+    private com.know_who_how.main_server.user.repository.UserKeywordRepository userKeywordRepository;
     @Spy
     private ObjectMapper objectMapper;
 
@@ -52,12 +52,6 @@ class AssetManagementServiceTest {
     private User mockUser;
     @Mock
     private UserInfo mockUserInfo;
-
-    @BeforeEach
-    void setUp() {
-        // Inject ObjectMapper into the service instance
-        assetManagementService = new AssetManagementService(userInfoRepository, assetsRepository, financialProductRepository, objectMapper);
-    }
 
     @Test
     @DisplayName("[실패] 포트폴리오 조회 시 사용자 정보가 없으면 예외 발생")
@@ -82,6 +76,7 @@ class AssetManagementServiceTest {
         given(mockUser.getAssetTotal()).willReturn(50000000L); // 총자산 5000만
         given(userInfoRepository.findByUser(mockUser)).willReturn(Optional.of(mockUserInfo));
         given(assetsRepository.findByUser(mockUser)).willReturn(new ArrayList<>()); // 부채 0
+        given(userKeywordRepository.findByUser(any(User.class))).willReturn(new ArrayList<>()); // 키워드 없음
 
         String depositProductJson = "{\"tiers\": [{\"months_gte\": 12, \"months_lt\": 13, \"rate\": 2.80}]}";
         FinancialProduct depositProduct = FinancialProduct.builder()
@@ -105,6 +100,7 @@ class AssetManagementServiceTest {
     void savePortfolioInfo_should_createNewInfo_when_userInfoNotFound() {
         // given
         PortfolioInfoRequest request = new PortfolioInfoRequest(1000L, LocalDate.now().plusYears(1), 100L, 50L, false, 5000L);
+        given(userRepository.findById(any())).willReturn(Optional.of(mockUser));
         given(userInfoRepository.findByUser(any(User.class))).willReturn(Optional.empty());
 
         // when
@@ -119,6 +115,7 @@ class AssetManagementServiceTest {
     void savePortfolioInfo_should_updateInfo_when_userInfoExists() {
         // given
         PortfolioInfoRequest request = new PortfolioInfoRequest(2000L, LocalDate.now().plusYears(2), 200L, 100L, true, 6000L);
+        given(userRepository.findById(any())).willReturn(Optional.of(mockUser));
         given(userInfoRepository.findByUser(any(User.class))).willReturn(Optional.of(mockUserInfo));
 
         // when

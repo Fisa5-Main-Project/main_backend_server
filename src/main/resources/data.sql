@@ -26,27 +26,29 @@ VALUES (
     '원금보존형'
 );
 
--- WON 적금 (SAVINGS)
+-- 우리 SUPER주거래 적금 (SAVINGS)
 INSERT INTO financial_product (product_name, product_type, bank_name, min_amount, max_amount, min_period_months, max_period_months, base_interest_rate, interest_rate_details, bonus_rate_details, compounding_strategy, applicable_tendency)
 VALUES (
-    'WON 적금',
-    'SAVINGS',
-    '우리은행',
-    NULL, -- No min amount
-    500000, -- Max monthly deposit
-    12,
-    12,
-    2.95,
-    NULL, -- No tiered rates
-    '{
-        "conditions": [
-            {"name": "WON통장/우리꿈통장에서 출금하여 가입하는 경우", "rate": 0.1},
-            {"name": "만기해지 시 우리 오픈뱅킹 서비스에 타행계좌가 등록되어 있는 경우", "rate": 0.1}
-        ]
-    }',
-    'SIMPLE',
-    '위험중립형'
-);
+           '우리 SUPER주거래 적금',
+           'SAVINGS',
+           '우리은행',
+           NULL, -- 최소 가입금액 없음
+           500000, -- 월 최대 50만원
+           12, -- 1년
+           36, -- 3년
+           2.15, -- 기본금리 (1년~3년 모두 2.15%)
+           NULL, -- 기간별 기본금리가 동일하므로 details 생략
+           '{
+               "conditions": [
+                   {"name": "급여이체 또는 연금이체 실적 (계약기간 1/2 이상)", "rate": 0.7},
+                   {"name": "공과금 자동이체 실적 (계약기간 1/2 이상)", "rate": 0.3},
+                   {"name": "우리카드(신용/체크) 결제계좌 지정 및 사용실적 (월 10만원 이상)", "rate": 0.3},
+                   {"name": "마케팅 동의(전화 및 SMS) 유지", "rate": 0.1}
+               ]
+           }',
+           'SIMPLE',
+           '위험중립형'
+       );
 
 -- Term (약관)
 INSERT INTO term (is_required, term_name) VALUES (true, '서비스 이용약관');

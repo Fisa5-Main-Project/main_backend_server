@@ -327,6 +327,7 @@ public class AuthService {
                     .birth(LocalDate.of(2001, 3, 24))
                     .gender(Gender.M)
                     .investmentTendancy(InvestmentTendancy.안정추구형)
+                    .assetTotal(30000000L)
                     .build();
             userRepository.save(testUser);
         }
