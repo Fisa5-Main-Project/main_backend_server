@@ -13,7 +13,6 @@ import lombok.Getter;
 public class OAuthResult {
     private Boolean isNewUser;
     private String signupToken;
-    private String grantType;
     private String accessToken;
     private String refreshToken;
 }
