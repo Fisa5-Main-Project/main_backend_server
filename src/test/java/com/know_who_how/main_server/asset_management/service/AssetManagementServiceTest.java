@@ -71,11 +71,19 @@ class AssetManagementServiceTest {
         // given
         given(mockUserInfo.getAnnualIncome()).willReturn(60000000L); // 연봉 6000만
         given(mockUserInfo.getFixedMonthlyCost()).willReturn(1000000L); // 월 고정비 100만
+        given(mockUserInfo.getGoalTargetDate()).willReturn(LocalDate.now().plusYears(6)); // 목표 기간 6년 (저축 점수 감소 목적)
         // 월 순저축 여력 = 400만
         given(mockUserInfo.getUser()).willReturn(mockUser);
         given(mockUser.getAssetTotal()).willReturn(50000000L); // 총자산 5000만
+        given(mockUser.getBirth()).willReturn(LocalDate.now().minusYears(30)); // 나이 30세
         given(userInfoRepository.findByUser(mockUser)).willReturn(Optional.of(mockUserInfo));
-        given(assetsRepository.findByUser(mockUser)).willReturn(new ArrayList<>()); // 부채 0
+
+        // idleCashAssets를 충분히 높게 설정하여 '목돈 예치형'이 되도록
+        com.know_who_how.main_server.global.entity.Asset.Asset mockAsset = org.mockito.Mockito.mock(com.know_who_how.main_server.global.entity.Asset.Asset.class);
+        given(mockAsset.getType()).willReturn(com.know_who_how.main_server.global.entity.Asset.AssetType.CURRENT);
+        given(mockAsset.getBalance()).willReturn(java.math.BigInteger.valueOf(10000000L)); // 유휴자금 1000만
+        given(assetsRepository.findByUser(mockUser)).willReturn(java.util.List.of(mockAsset)); // 부채 0
+
         given(userKeywordRepository.findByUser(any(User.class))).willReturn(new ArrayList<>()); // 키워드 없음
 
         String depositProductJson = "{\"tiers\": [{\"months_gte\": 12, \"months_lt\": 13, \"rate\": 2.80}]}";
