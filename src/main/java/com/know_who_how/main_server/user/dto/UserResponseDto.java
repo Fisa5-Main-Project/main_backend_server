@@ -23,6 +23,7 @@ public class UserResponseDto {
     private InvestmentTendancy investmentTendancy;
     private String provider;
     private boolean userMydataRegistration;
+    private Long assetTotal;
 
     public static UserResponseDto from(User user) {
         return UserResponseDto.builder()
@@ -35,6 +36,7 @@ public class UserResponseDto {
             .investmentTendancy(user.getInvestmentTendancy())
             .provider(user.getProvider())
             .userMydataRegistration(user.isUserMydataRegistration())
+            .assetTotal(user.getAssetTotal())
             .build();
     }
 }

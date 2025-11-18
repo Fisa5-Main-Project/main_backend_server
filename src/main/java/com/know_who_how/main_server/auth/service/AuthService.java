@@ -328,7 +328,6 @@ public class AuthService {
                     .birth(LocalDate.of(2001, 3, 24))
                     .gender(Gender.M)
                     .investmentTendancy(InvestmentTendancy.안정추구형)
-                    .assetTotal(30000000L) // 자산 3천만원 추가
                     .userMydataRegistration(false) // 새로 추가된 필드
                     .build();
             userRepository.save(testUser);

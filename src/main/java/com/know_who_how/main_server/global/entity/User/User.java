@@ -90,6 +90,10 @@ public class User implements UserDetails {
         this.providerId = providerId;
     }
 
+    public void updateAssetTotal(Long assetTotal) {
+        this.assetTotal = assetTotal;
+    }
+
     // === UserDetails 인터페이스 구현 메서드 ===
 
     @Override

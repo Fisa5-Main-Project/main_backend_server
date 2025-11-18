@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class AssetManagementService {
 
     private final UserInfoRepository userInfoRepository;
@@ -67,11 +67,23 @@ public class AssetManagementService {
         }
     }
 
+    @Transactional
     public PortfolioResponse getPortfolio(User user) {
-        UserInfo userInfo = userInfoRepository.findByUser(user)
+        User managedUser = userRepository.findById(user.getUserId())
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        UserInfo userInfo = userInfoRepository.findByUser(managedUser)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_INFO_NOT_FOUND));
 
-        List<Asset> assetsList = assetsRepository.findByUser(user);
+        List<Asset> assetsList = assetsRepository.findByUser(managedUser);
+
+        // 총자산 계산 및 업데이트
+        long totalAsset = assetsList.stream()
+            .mapToLong(asset -> asset.getBalance().longValue())
+            .sum();
+        managedUser.updateAssetTotal(totalAsset);
+        userRepository.save(managedUser);
+
 
         PortfolioResponse.GoalMetricsDto goalMetrics = calculateGoalMetrics(userInfo, assetsList);
 
@@ -118,6 +130,7 @@ public class AssetManagementService {
         return new PortfolioResponse(goalMetrics, cashFlowDiagnostic, prediction);
     }
 
+    @Transactional(readOnly = true)
     public SimulationResponse runInstallmentSavingSimulation(SimulationRequest request) {
         FinancialProduct product = financialProductRepository.findByProductName("우리 SUPER주거래 적금")
             .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
@@ -137,6 +150,7 @@ public class AssetManagementService {
         );
     }
 
+    @Transactional(readOnly = true)
     public SimulationResponse runDepositSimulation(SimulationRequest request) {
         FinancialProduct product = financialProductRepository.findByProductName("WON플러스 예금")
             .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
@@ -154,6 +168,7 @@ public class AssetManagementService {
         );
     }
 
+    @Transactional(readOnly = true)
     public FinancialProductResponse getProductDetails(String productName) {
         FinancialProduct product = financialProductRepository.findByProductName(productName)
             .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
