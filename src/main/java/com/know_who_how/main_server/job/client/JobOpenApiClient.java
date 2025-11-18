@@ -1,0 +1,127 @@
+package com.know_who_how.main_server.job.client;
+
+import com.know_who_how.main_server.global.exception.CustomException;
+import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.job.dto.external.ExternalApiResponse;
+import com.know_who_how.main_server.job.dto.external.ExternalJobDetailItemWrapper;
+import com.know_who_how.main_server.job.dto.external.ExternalJobListItems;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+
+import java.time.Duration;
+
+// Web Client를 사용해 외부 Open API를 실제로 호출하는 Client
+@Slf4j
+@Component
+public class JobOpenApiClient {
+    
+    private final WebClient webClient; // 비동기 HTTP 클라이언트
+    private final String serviceKey; // application.yml에서 주입받는 키
+
+    // WebClient.Builder를 주입받아 생성자에서 초기화
+    public JobOpenApiClient(
+            WebClient.Builder webClientBuilder,
+            @Value("${open-api.base-url}") String baseUrl,
+            @Value("${open-api.service-key}") String serviceKey
+    ) {
+        // webClient 인스턴스 생성
+        this.webClient = webClientBuilder.baseUrl(baseUrl).build();
+        this.serviceKey = serviceKey;
+    }
+
+    /**
+     * 1. 채용 공고 리스트 조회 (getJobList)
+     */
+    public ExternalApiResponse<ExternalJobListItems> fetchJobs(String location, String empType, int page, int size) {
+        // .get()부터 .block()까지가 하나의 비동기 요청 파이프라인
+        return webClient.get()// 1. HTTP GET요청 시작
+                .uri(uriBuilder -> uriBuilder //2. URL 구성
+                        .path("/getJobList")
+                        .queryParam("serviceKey", serviceKey) //2-1. 쿼리파라미터
+                        .queryParam("pageNo", page)
+                        .queryParam("numOfRows", size)
+                        .queryParam("workPlcNm", location)
+                        .queryParam("emplymShp", empType)
+                        .queryParam("type", "json") // 응답 형식 json으로 고정
+                        .build()
+                )
+                .accept(MediaType.APPLICATION_JSON) // 3. HTTP 'Accept' 헤더를 '/application/json'으로 설정
+                .retrieve() // 4. 실제 요청 실행, 응답 처리 준비
+                
+                // [에러 처리 1] 클라이언트 에러의 경우
+                .onStatus(HttpStatusCode::is4xxClientError, clientResponse ->
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            log.error("Open API 4xx Error: {}", errorBody);
+                            // 미인증 에러인 경우 UNAUTHORIZED 예외 발생
+                            if (clientResponse.statusCode().value() == 401) {
+                                return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_UNAUTHORIZED));
+                            }
+                            // 그 외 4xx 에러는 NOT_FOUND 처리
+                            return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_NOT_FOUND));
+                        })
+                )
+                
+                // [에러 처리 2] 서버 에러의 경우
+                .onStatus(HttpStatusCode::is5xxServerError, clientResponse ->
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            log.error("Open API 5xx Error: {}", errorBody);
+                            return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_SERVER_ERROR));
+                        })
+                )
+
+                // [성공 처리] 정상 응답(2xx)이 온 경우, DTO에 맞게 변환
+                .bodyToMono(ExternalApiResponse.getTypeReferenceForList())
+
+                // [재시도] 예외 발생한 경우 재시도
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)) // 1초 간격으로 최대 3회 재시도
+                        // 모든 에러가 아닌 우리가 정의한 에러(네트워크/서버 오류)의 경우에만 재시도
+                        .filter(throwable -> throwable instanceof CustomException)
+                )
+                // [재시도도 실패한 경우]
+                .doOnError(e -> log.error("Open API 'getJobList' 호출 실패", e))
+
+                // 10초간 대기 후 결과 반환
+                .block(Duration.ofSeconds(10));
+    }
+
+    /**
+     * 2. 채용 공고 상세 조회 (getJobInfo)
+     */
+    public ExternalApiResponse<ExternalJobDetailItemWrapper> fetchJobDetail(String jobId) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/getJobInfo")
+                        .queryParam("serviceKey", serviceKey)
+                        .queryParam("id", jobId)
+                        .queryParam("type", "json")
+                        .build()
+                )
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, clientResponse ->
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            log.error("Open API 4xx Error: {}", errorBody);
+                            return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_NOT_FOUND));
+                        })
+                )
+                .onStatus(HttpStatusCode::is5xxServerError, clientResponse ->
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            log.error("Open API 5xx Error: {}", errorBody);
+                            return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_SERVER_ERROR));
+                        })
+                )
+                .bodyToMono(ExternalApiResponse.getTypeReferenceForDetail())
+
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)) // <-- 괄호 여기서 닫기
+                        .filter(throwable -> throwable instanceof CustomException) // <-- .filter를 밖에서 호출
+                )
+                .doOnError(e -> log.error("Open API 'getJobInfo' 호출 실패", e))
+                .block(Duration.ofSeconds(10));
+    }
+}
