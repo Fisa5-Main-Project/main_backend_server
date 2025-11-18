@@ -204,7 +204,7 @@ public class AssetManagementService {
     }
 
     private PortfolioResponse.CashFlowDto createCashFlowDto(boolean isSavingsType, long monthlyNetSavings, long idleCashAssets, FinancialProduct product) {
-        // 명세에 따라 하드코딩된 이자율 사용
+        // 명세에 따라 이자율 사용
         double interestRate = isSavingsType ? SAVINGS_INTEREST_RATE.doubleValue() : DEPOSIT_INTEREST_RATE.doubleValue();
 
         if (isSavingsType) {
