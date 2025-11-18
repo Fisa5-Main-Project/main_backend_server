@@ -40,8 +40,6 @@ public class AssetManagementService {
 
     // 명세에 따른 상수 정의
     private static final BigDecimal TAX_RATE = new BigDecimal("0.154"); // 이자소득세율 (15.4%)
-    private static final BigDecimal SAVINGS_INTEREST_RATE = new BigDecimal("3.15"); // 적금 이자율 (3.15%)
-    private static final BigDecimal DEPOSIT_INTEREST_RATE = new BigDecimal("2.80"); // 예금 이자율 (2.80%)
     private static final long SAVINGS_PREDICTION_MONTHLY_DEPOSIT = 500_000L; // 월 저축형 예측 월 납입액
     private static final int PREDICTION_PERIOD_MONTHS = 12; // 예측 기간 (12개월)
 
@@ -115,7 +113,7 @@ public class AssetManagementService {
             .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
         PortfolioResponse.CashFlowDto cashFlowDiagnostic = createCashFlowDto(isSavingsType, monthlyNetSavings, idleCashAssets, recommendedMainProduct);
-        PortfolioResponse.PredictionDto prediction = createPredictionDto(isSavingsType, idleCashAssets);
+        PortfolioResponse.PredictionDto prediction = createPredictionDto(isSavingsType, idleCashAssets, recommendedMainProduct);
 
         return new PortfolioResponse(goalMetrics, cashFlowDiagnostic, prediction);
     }
@@ -183,16 +181,18 @@ public class AssetManagementService {
     }
 
     private PortfolioResponse.GoalMetricsDto calculateGoalMetrics(UserInfo userInfo, List<Asset> assetsList) {
-        long totalAsset = userInfo.getUser().getAssetTotal() != null ? userInfo.getUser().getAssetTotal() : 0L;
+        long totalAsset = assetsList.stream().mapToLong(asset -> asset.getBalance().longValue()).sum();
         long totalLoan = calculateTotalAssetByType(assetsList, AssetType.LOAN);
         long netAsset = totalAsset - totalLoan;
+        long monthlyExpenditure = userInfo.getExpectationMonthlyCost() + userInfo.getFixedMonthlyCost();
 
         int goalProgressPercent = (userInfo.getGoalAmount() > 0) ? (int) ((double) netAsset / userInfo.getGoalAmount() * 100) : 0;
         long yearsLeft = Math.max(0, Period.between(LocalDate.now(), userInfo.getGoalTargetDate()).getYears());
 
         return new PortfolioResponse.GoalMetricsDto(
             userInfo.getGoalTargetDate(), yearsLeft, userInfo.getGoalAmount(),
-            totalAsset, netAsset, Math.max(0, Math.min(100, goalProgressPercent))
+            totalAsset, netAsset, Math.max(0, Math.min(100, goalProgressPercent)),
+            monthlyExpenditure
         );
     }
 
@@ -205,7 +205,9 @@ public class AssetManagementService {
 
     private PortfolioResponse.CashFlowDto createCashFlowDto(boolean isSavingsType, long monthlyNetSavings, long idleCashAssets, FinancialProduct product) {
         // 명세에 따라 이자율 사용
-        double interestRate = isSavingsType ? SAVINGS_INTEREST_RATE.doubleValue() : DEPOSIT_INTEREST_RATE.doubleValue();
+        double interestRate = isSavingsType
+                ? product.getBaseInterestRate().doubleValue()
+                : getInterestRateForDeposit(product.getInterestRateDetails(), PREDICTION_PERIOD_MONTHS).doubleValue();
 
         if (isSavingsType) {
             return new PortfolioResponse.CashFlowDto("월 저축형", monthlyNetSavings, null, product.getProductName(), interestRate);
@@ -214,16 +216,16 @@ public class AssetManagementService {
         }
     }
 
-    private PortfolioResponse.PredictionDto createPredictionDto(boolean isSavingsType, long idleCashAssets) {
+    private PortfolioResponse.PredictionDto createPredictionDto(boolean isSavingsType, long idleCashAssets, FinancialProduct product) {
         if (isSavingsType) {
             // '월 저축형'은 월 50만원, 12개월 적금으로 예측 (명세 기준)
             long principal = SAVINGS_PREDICTION_MONTHLY_DEPOSIT * PREDICTION_PERIOD_MONTHS;
-            Map<String, Long> result = calculateInstallmentSavings(SAVINGS_PREDICTION_MONTHLY_DEPOSIT, SAVINGS_INTEREST_RATE, PREDICTION_PERIOD_MONTHS);
+            Map<String, Long> result = calculateInstallmentSavings(SAVINGS_PREDICTION_MONTHLY_DEPOSIT, product.getBaseInterestRate(), PREDICTION_PERIOD_MONTHS);
             return new PortfolioResponse.PredictionDto("적금 시뮬레이션", principal, PREDICTION_PERIOD_MONTHS, result.get("expectedAmount"), result.get("interestAmount"));
         } else {
             // '목돈 예치형'은 유휴 목돈 전액, 12개월 예금으로 예측 (명세 기준)
             long principal = idleCashAssets;
-            Map<String, Long> result = calculateDeposit(principal, DEPOSIT_INTEREST_RATE, PREDICTION_PERIOD_MONTHS);
+            Map<String, Long> result = calculateDeposit(principal, getInterestRateForDeposit(product.getInterestRateDetails(), PREDICTION_PERIOD_MONTHS), PREDICTION_PERIOD_MONTHS);
             return new PortfolioResponse.PredictionDto("예금 시뮬레이션", principal, PREDICTION_PERIOD_MONTHS, result.get("expectedAmount"), result.get("interestAmount"));
         }
     }

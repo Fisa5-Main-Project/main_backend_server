@@ -29,7 +29,9 @@ public record PortfolioResponse(
             @Schema(description = "순자산 (총자산 - 총부채)", example = "45000000")
             long netAsset,
             @Schema(description = "목표 달성률 (순자산 / 목표금액 * 100)", example = "45")
-            int goalProgressPercent
+            int goalProgressPercent,
+            @Schema(description = "월 지출액 (월 생활비 + 고정 지출)", example = "1500000")
+            long monthlyExpenditure
     ) {}
 
     @Schema(description = "현금 흐름 진단 DTO")

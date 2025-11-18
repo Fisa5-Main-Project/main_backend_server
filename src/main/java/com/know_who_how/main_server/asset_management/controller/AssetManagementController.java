@@ -26,7 +26,8 @@ public class AssetManagementController {
     public ResponseEntity<ApiResponse<Void>> savePortfolioInfo(
             @Valid @RequestBody PortfolioInfoRequest request,
             @AuthenticationPrincipal User user) {
-        assetManagementService.savePortfolioInfo(request, user);
+        assetManagementService.savePortfolioInfo(request,
+                user);
         return new ResponseEntity<>(ApiResponse.onSuccess(), HttpStatus.CREATED);
     }
 

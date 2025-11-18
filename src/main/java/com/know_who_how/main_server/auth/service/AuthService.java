@@ -124,6 +124,7 @@ public class AuthService {
                 .investmentTendancy(investmentTendancy)
                 .provider(provider) // 소셜 정보 추가
                 .providerId(providerId) // 소셜 정보 추가
+                .userMydataRegistration(false) // 새로 추가된 필드
                 .build();
         userRepository.save(newUser);
 
@@ -328,6 +329,7 @@ public class AuthService {
                     .gender(Gender.M)
                     .investmentTendancy(InvestmentTendancy.안정추구형)
                     .assetTotal(30000000L) // 자산 3천만원 추가
+                    .userMydataRegistration(false) // 새로 추가된 필드
                     .build();
             userRepository.save(testUser);
         }
