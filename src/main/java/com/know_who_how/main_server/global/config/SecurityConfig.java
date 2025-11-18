@@ -121,11 +121,11 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // FE 주소 정해지면 추가
-        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOrigins(List.of("https://knowwhohow.site","http://localhost:3000"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(false); // JWT 토큰 사용 시, 자격증명(쿠키 등) 불필요
+        configuration.setAllowCredentials(true); // JWT 토큰 사용 시, 자격증명(쿠키 등) 불필요
         configuration.setMaxAge(3600L); // Preflight 요청 캐시 시간 (1시간)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
