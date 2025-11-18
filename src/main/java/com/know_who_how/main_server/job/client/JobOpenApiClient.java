@@ -1,5 +1,7 @@
 package com.know_who_how.main_server.job.client;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.job.dto.external.ExternalApiResponse;
@@ -9,18 +11,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
 
+
 // Web Client를 사용해 외부 Open API를 실제로 호출하는 Client
 @Slf4j
 @Component
 public class JobOpenApiClient {
-    
+
     private final WebClient webClient; // 비동기 HTTP 클라이언트
     private final String serviceKey; // application.yml에서 주입받는 키
 
@@ -30,30 +36,54 @@ public class JobOpenApiClient {
             @Value("${open-api.base-url}") String baseUrl,
             @Value("${open-api.service-key}") String serviceKey
     ) {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // 빈 문자열("")을 null 객체로 받아들임.
+        objectMapper.configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true);
+        // "item"이 단일 객체로 와도 배열로 처리하도록 허용
+        objectMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
+
+        ExchangeStrategies strategies = ExchangeStrategies.builder()
+                .codecs(configurer -> {
+                    configurer.defaultCodecs().configureDefaultCodec(codec -> {
+                                // 4. 그 중에서 Jackson (JSON) 디코더만 찾아서
+                                if (codec instanceof Jackson2JsonDecoder) {
+                                    // 5. ObjectMapper를 우리 커스텀으로 교체
+                                    ((Jackson2JsonDecoder) codec).setObjectMapper(objectMapper);
+                                }
+                                // 6. JSON 인코더도 동일하게 교체
+                                if (codec instanceof Jackson2JsonEncoder) {
+                                    ((Jackson2JsonEncoder) codec).setObjectMapper(objectMapper);
+                                }
+                            }
+                    );
+                }).build();
+
         // webClient 인스턴스 생성
-        this.webClient = webClientBuilder.baseUrl(baseUrl).build();
+        this.webClient = webClientBuilder.baseUrl(baseUrl).exchangeStrategies(strategies).build();
         this.serviceKey = serviceKey;
     }
 
     /**
      * 1. 채용 공고 리스트 조회 (getJobList)
+     * @param search
      */
-    public ExternalApiResponse<ExternalJobListItems> fetchJobs(String location, String empType, int page, int size) {
+    public ExternalApiResponse<ExternalJobListItems> fetchJobs(String search, String empType, int page, int size) {
         // .get()부터 .block()까지가 하나의 비동기 요청 파이프라인
         return webClient.get()// 1. HTTP GET요청 시작
                 .uri(uriBuilder -> uriBuilder //2. URL 구성
-                        .path("/getJobList")
+                        .path("/SenuriService/getJobList")
                         .queryParam("serviceKey", serviceKey) //2-1. 쿼리파라미터
                         .queryParam("pageNo", page)
                         .queryParam("numOfRows", size)
-                        .queryParam("workPlcNm", location)
+                        .queryParam("search", search)
                         .queryParam("emplymShp", empType)
                         .queryParam("type", "json") // 응답 형식 json으로 고정
                         .build()
                 )
                 .accept(MediaType.APPLICATION_JSON) // 3. HTTP 'Accept' 헤더를 '/application/json'으로 설정
                 .retrieve() // 4. 실제 요청 실행, 응답 처리 준비
-                
+
                 // [에러 처리 1] 클라이언트 에러의 경우
                 .onStatus(HttpStatusCode::is4xxClientError, clientResponse ->
                         clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
@@ -66,7 +96,7 @@ public class JobOpenApiClient {
                             return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_NOT_FOUND));
                         })
                 )
-                
+
                 // [에러 처리 2] 서버 에러의 경우
                 .onStatus(HttpStatusCode::is5xxServerError, clientResponse ->
                         clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
@@ -96,7 +126,7 @@ public class JobOpenApiClient {
     public ExternalApiResponse<ExternalJobDetailItemWrapper> fetchJobDetail(String jobId) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/getJobInfo")
+                        .path("/SenuriService/getJobInfo")
                         .queryParam("serviceKey", serviceKey)
                         .queryParam("id", jobId)
                         .queryParam("type", "json")
@@ -122,6 +152,7 @@ public class JobOpenApiClient {
                         .filter(throwable -> throwable instanceof CustomException) // <-- .filter를 밖에서 호출
                 )
                 .doOnError(e -> log.error("Open API 'getJobInfo' 호출 실패", e))
-                .block(Duration.ofSeconds(10));
+                .block(Duration.ofSeconds(60));
     }
+
 }

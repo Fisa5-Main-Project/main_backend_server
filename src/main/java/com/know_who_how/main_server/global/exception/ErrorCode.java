@@ -47,7 +47,7 @@ public enum ErrorCode {
 
 
     // job exception
-    JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "JOB_OO1", "해당 ID의 채용 공고를 찾을 수 없습니다."),
+    JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "JOB_001", "해당 ID의 채용 공고를 찾을 수 없습니다."),
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "JOB_002", "필수 파라미터가 누락되거나 유효하지 않습니다."),
 
     // External Open API Exception

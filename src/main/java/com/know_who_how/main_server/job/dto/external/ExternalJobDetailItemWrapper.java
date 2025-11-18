@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.job.dto.external;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.know_who_how.main_server.job.dto.OpenApiDetailItem;
 import lombok.Getter;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 /**
  * 상세 조회 API (getJobInfo)의 body DTO
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @NoArgsConstructor
 public class ExternalJobDetailItemWrapper {

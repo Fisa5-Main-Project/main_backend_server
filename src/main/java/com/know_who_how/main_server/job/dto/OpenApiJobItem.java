@@ -1,10 +1,12 @@
 package com.know_who_how.main_server.job.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 // Open API 목록 조회 응답(item 배열)의 개별 항목 매핑 DTO
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @NoArgsConstructor
 public class OpenApiJobItem {

@@ -30,8 +30,7 @@
     {
       "name": "jwt.access-token-validity-in-seconds",
       "type": "java.lang.Long",
-      "sourceType": "com.know_who_how.main_server.global.jwt.JwtProperties",
-      "defaultValue": 0
+      "sourceType": "com.know_who_how.main_server.global.jwt.JwtProperties"
     },
     {
       "name": "jwt.header",
@@ -46,8 +45,7 @@
     {
       "name": "jwt.refresh-token-validity-in-seconds",
       "type": "java.lang.Long",
-      "sourceType": "com.know_who_how.main_server.global.jwt.JwtProperties",
-      "defaultValue": 0
+      "sourceType": "com.know_who_how.main_server.global.jwt.JwtProperties"
     },
     {
       "name": "jwt.secret",

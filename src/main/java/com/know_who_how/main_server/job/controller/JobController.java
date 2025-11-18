@@ -16,15 +16,16 @@ public class JobController {
 
     /**
      * 채용 공고 리스트 조회
+     * @param search (값: "대전 중구")
      */
     @GetMapping
     public ApiResponse<JobListResponseDto> getJobs(
-            @RequestParam String location,
+            @RequestParam String search,
             @RequestParam String employmentType,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size
     ){
-        JobListResponseDto data = jobService.getJobList(location, employmentType,page, size);
+        JobListResponseDto data = jobService.getJobList(search, employmentType,page, size);
         return ApiResponse.onSuccess(data);
     }
 

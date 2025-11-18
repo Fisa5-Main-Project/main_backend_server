@@ -14,7 +14,6 @@ public class JobItemDto {
     private String id;
     private String title;
     private String companyName;
-    private String location;
     private String deadlineStatus;
     private String employmentType;
     private String jobCategory;

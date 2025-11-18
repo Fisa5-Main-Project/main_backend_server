@@ -41,9 +41,9 @@ public class JobService {
 
 
     // 1. 채용공고 리스트 조회
-    public JobListResponseDto getJobList(String location, String empType, int page, int size) {
-        String cacheKey = String.format("%sloc:%s:emp:%s:p:%d:s:%d",
-                KEY_JOB_LIST, location, empType, page, size);
+    public JobListResponseDto getJobList(String search, String empType, int page, int size) {
+        String cacheKey = String.format("%ssearch:%s:emp:%s:p:%d:s:%d",
+                KEY_JOB_LIST, search, empType, page, size);
 
         // 1. 캐시 확인 (유지)
         JobListResponseDto cachedData = (JobListResponseDto) redisUtil.get(cacheKey);
@@ -56,7 +56,7 @@ public class JobService {
         log.info("[Cache MISS] Key: {}", cacheKey);
 
         // 2. Open API 호출
-        ExternalApiResponse<ExternalJobListItems> openApiDataWrapper = apiClient.fetchJobs(location, empType, page, size);
+        ExternalApiResponse<ExternalJobListItems> openApiDataWrapper = apiClient.fetchJobs(search, empType, page, size);
 
         // openApiDataWrapper에서 body만 꺼내서 openApiData에 담기.
         // (openApiDataWrappper == null이면 NullPointerException 나는걸 방지)
@@ -122,14 +122,21 @@ public class JobService {
             extraData = new JobExtraDataDto("정보 없음", "정보 없음");
         }
 
+        // 상세보기 DTO에서도 '고용형태'변환 로직
+        JobExtraDataDto transformedExtraData = JobExtraDataDto.builder()
+                .employmentType(mapEmploymentType(extraData.getEmploymentType()))
+                .jobCategory(extraData.getJobCategory())
+                .build();
+
         // 4. 2개 데이터(API 응답 + Redis 캐시)를 조합하여 DTO 매핑
-        JobDetailResponseDto responseDto = mapToJobDetailDto(detailItem, extraData);
+        JobDetailResponseDto responseDto = mapToJobDetailDto(detailItem, transformedExtraData);
 
         // 5. 최종 DTO 캐시 저장 (1시간)  - 앱 사용할 동안 불편함 없도록
         redisUtil.save(cacheKey, responseDto, Duration.ofHours(1));
 
         return responseDto;
     }
+
 
     // --- 데이터 캐싱 헬퍼 메서드 ---
 
@@ -164,9 +171,8 @@ public class JobService {
                         .id(item.getJobId())
                         .title(item.getRecrtTitle())
                         .companyName(item.getOranNm())
-                        .location(item.getWorkPlcNm())
                         .deadlineStatus(calculateListDeadLineStatus(item.getToDd(), item.getDeadline()))
-                        .employmentType(item.getEmplymShpNm())
+                        .employmentType(mapEmploymentType(item.getEmplymShpNm()))
                         .jobCategory(item.getJobclsNm())
                         .build())
                 .collect(Collectors.toList());
@@ -300,7 +306,7 @@ public class JobService {
     }
 
     /**
-     * 접수방법 코드(acptMthdCd)를 한글 문자열로 변환합니다.
+     * 접수방법 코드(acptMthdCd)를 한글 문자열로 변환
      *
      * @param acptMthdCd (CM0801, CM0802 ...)
      * @return (온라인, 이메일 ...)
@@ -323,4 +329,30 @@ public class JobService {
                 return "기타";
         }
     }
+
+    /**
+     *
+     * @param codeOrName 고용형태코드나 이름
+     * @return (정규직, 계약직, ...)
+     */
+    private String mapEmploymentType(String codeOrName) {
+        if(codeOrName == null) {
+            return "정보 없음";
+        }
+        switch (codeOrName) {
+            case "CM0101":
+                return "정규직";
+            case "CM0102":
+                return "계약직";
+            case "CM0103":
+                return "시간제일자리";
+            case "CM0104":
+                return "일당직";
+            case "CM0105":
+                return "기타";
+            default:
+                return codeOrName;
+        }
+    }
+
 }
