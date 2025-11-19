@@ -153,8 +153,8 @@ public class JobOpenApiClient {
                 .bodyToMono(ExternalApiResponse.getTypeReferenceForDetail())
 
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
-                        .filter(throwable -> throwable instanceof CustomException)
-                )
+                        .filter(throwable -> throwable instanceof CustomException &&
+                                ((CustomException) throwable).getErrorCode() == ErrorCode.EXTERNAL_API_SERVER_ERROR)) // 4xx 클라이언트 오류는 재시도해도 성공할 가능성이 낮으므로, 재시도 대상에서 제외
                 .doOnError(e -> log.error("Open API 'getJobInfo' 호출 실패", e))
                 .block(Duration.ofSeconds(60));
     }
