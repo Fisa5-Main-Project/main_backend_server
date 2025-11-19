@@ -71,7 +71,7 @@ public class JobOpenApiClient {
     /**
      * 1. 채용 공고 리스트 조회 (getJobList)
      *
-     * @param search
+     * @param search 검색어(지역)
      */
     public ExternalApiResponse<ExternalJobListItems> fetchJobs(String search, String empType, int page, int size) {
         // .get()부터 .block()까지가 하나의 비동기 요청 파이프라인
