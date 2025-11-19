@@ -58,7 +58,7 @@ public enum ErrorCode {
 
     // External Open API Exception
     EXTERNAL_API_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "EXTERNAL_001", "Open API 인증키가 유효하지 않습니다."),
-    EXTERNAL_API_FORBIDDEN(HttpStatus.FORBIDDEN, "EXTERNAL_OO2", "Open API 서비스 접근 권한이 없습니다.(신청/승인 상태 확인)"),
+    EXTERNAL_API_FORBIDDEN(HttpStatus.FORBIDDEN, "EXTERNAL_002", "Open API 서비스 접근 권한이 없습니다.(신청/승인 상태 확인)"),
     EXTERNAL_API_NOT_FOUND(HttpStatus.NOT_FOUND, "EXTERNAL_003", "Open API 서비스가 존재하지 않습니다.(URL 확인 필요)"),
     EXTERNAL_API_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "EXTERNAL_004","Open API 일일 호출 허용량을 초과였습니다."),
     EXTERNAL_API_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_005", "기관 API 서버로부터 응답을 받지 못했습니다.");
