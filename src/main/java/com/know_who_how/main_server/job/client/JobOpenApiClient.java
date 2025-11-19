@@ -124,7 +124,8 @@ public class JobOpenApiClient {
                 // [재시도] 예외 발생한 경우 재시도
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)) // 1초 간격으로 최대 3회 재시도
                         // 모든 에러가 아닌 우리가 정의한 에러(네트워크/서버 오류)의 경우에만 재시도
-                        .filter(throwable -> throwable instanceof CustomException)
+                        .filter(throwable -> throwable instanceof CustomException &&
+                                ((CustomException) throwable).getErrorCode() == ErrorCode.EXTERNAL_API_SERVER_ERROR)
                 )
                 // [재시도도 실패한 경우]
                 .doOnError(e -> log.error("Open API 'getJobList' 호출 실패", e))
