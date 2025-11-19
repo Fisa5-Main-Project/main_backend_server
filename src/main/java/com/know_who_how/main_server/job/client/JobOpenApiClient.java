@@ -36,6 +36,8 @@ public class JobOpenApiClient {
             @Value("${open-api.base-url}") String baseUrl,
             @Value("${open-api.service-key}") String serviceKey
     ) {
+
+        // Open API 응답으로 빈 문자열이 올 경우 null로 처리하기 위함.
         ObjectMapper objectMapper = new ObjectMapper();
 
         // 빈 문자열("")을 null 객체로 받아들임.
@@ -43,6 +45,8 @@ public class JobOpenApiClient {
         // "item"이 단일 객체로 와도 배열로 처리하도록 허용
         objectMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
+
+        // 빈 문자열/단일 객체 등을 처리하도록 커스텀한 ObjectMapper를 WebClient에 설정
         ExchangeStrategies strategies = ExchangeStrategies.builder()
                 .codecs(configurer -> {
                     configurer.defaultCodecs().configureDefaultCodec(codec -> {
@@ -148,8 +152,8 @@ public class JobOpenApiClient {
                 )
                 .bodyToMono(ExternalApiResponse.getTypeReferenceForDetail())
 
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)) // <-- 괄호 여기서 닫기
-                        .filter(throwable -> throwable instanceof CustomException) // <-- .filter를 밖에서 호출
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .filter(throwable -> throwable instanceof CustomException)
                 )
                 .doOnError(e -> log.error("Open API 'getJobInfo' 호출 실패", e))
                 .block(Duration.ofSeconds(60));

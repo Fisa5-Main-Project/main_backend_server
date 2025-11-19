@@ -120,6 +120,8 @@ public class JobService {
             // '고용 형태', '직종'은 정보 없음으로 처리
             log.warn("[Cache MISS] 'job:extra' 데이터 없음. Key: {}", extraDataKey);
             extraData = new JobExtraDataDto("정보 없음", "정보 없음");
+        }else{
+            log.info("[Cache HIT] Key: {}", extraDataKey);
         }
 
         // 상세보기 DTO에서도 '고용형태'변환 로직
