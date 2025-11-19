@@ -22,7 +22,7 @@ import java.io.IOException;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/login/oauth2/code")
+@RequestMapping("/login/oauth2/code/kakao") // OAuth2 Client 경로랑 충돌 문제 해결 /login/oauth2/code -> /login/oauth2/code/kakao
 public class OAuthController {
 
     private final OAuthService oAuthService;
@@ -54,9 +54,9 @@ public class OAuthController {
                                       }
                                     }""")))
     })
-    @GetMapping("/{registrationId}")
+    @GetMapping // Path제거 후 하단에 registrationId 추가
     public void oauth2Login(
-            @PathVariable String registrationId,
+
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error,
             @RequestParam(required = false, name = "error_description") String errorDescription,
@@ -75,7 +75,7 @@ public class OAuthController {
             // 여기서는 예외를 발생시켜 GlobalExceptionHandler가 처리하도록 합니다.
             throw new CustomException(ErrorCode.OAUTH_LOGIN_FAILED);
         }
-
+        String registrationId = "kakao";
         log.info("카카오 로그인 콜백 요청 - registrationId: {}, code: {}", registrationId, code);
         OAuthResult result = oAuthService.oauthLogin(registrationId, code);
 

@@ -47,6 +47,10 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 50)
     private String name;
 
+    // [추가] 마이데이터 등록 여부 (User 기준으로 이전)
+    @Column(name = "user_mydata_registration")
+    private Boolean userMydataRegistration;
+
     @Column(name = "asset_total")
     private Long assetTotal;
 
@@ -66,13 +70,15 @@ public class User implements UserDetails {
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Boolean userMydataRegistration, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
         this.birth = birth;
         this.gender = gender;
         this.name = name;
+        // [변경] 마이데이터 등록 여부 기본값 또는 전달값 사용(null이면 false)
+        this.userMydataRegistration = (userMydataRegistration != null) ? userMydataRegistration : false;
         this.assetTotal = assetTotal;
         this.investmentTendancy = investmentTendancy;
         this.provider = provider;
@@ -132,5 +138,10 @@ public class User implements UserDetails {
         
         // 계정이 활성화되었는지
         return true;
+    }
+
+    // [추가] 마이데이터 연동 완료 상태로 마킹
+    public void markMydataRegistered() {
+        this.userMydataRegistration = true;
     }
 }
