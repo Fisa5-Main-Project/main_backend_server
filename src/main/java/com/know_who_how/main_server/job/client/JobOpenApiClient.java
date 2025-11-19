@@ -91,13 +91,22 @@ public class JobOpenApiClient {
                 // [에러 처리 1] 클라이언트 에러의 경우
                 .onStatus(HttpStatusCode::is4xxClientError, clientResponse ->
                         clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
-                            log.error("Open API 4xx Error: {}", errorBody);
-                            // 미인증 에러인 경우 UNAUTHORIZED 예외 발생
-                            if (clientResponse.statusCode().value() == 401) {
-                                return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_UNAUTHORIZED));
+                            log.error("Open API 4xx Error: status = {}, body={}", clientResponse.statusCode(), errorBody);
+                            ErrorCode errorCode;
+                            switch(clientResponse.statusCode().value()){
+                                case 401:
+                                    errorCode = ErrorCode.EXTERNAL_API_UNAUTHORIZED;
+                                    break;
+                                case 403:
+                                    errorCode = ErrorCode.EXTERNAL_API_FORBIDDEN;
+                                    break;
+                                case 429:
+                                    errorCode = ErrorCode.EXTERNAL_API_RATE_LIMIT;
+                                    break;
+                                default:
+                                    errorCode = ErrorCode.EXTERNAL_API_NOT_FOUND;
                             }
-                            // 그 외 4xx 에러는 NOT_FOUND 처리
-                            return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_NOT_FOUND));
+                            return Mono.error(new CustomException(errorCode));
                         })
                 )
 
@@ -120,8 +129,8 @@ public class JobOpenApiClient {
                 // [재시도도 실패한 경우]
                 .doOnError(e -> log.error("Open API 'getJobList' 호출 실패", e))
 
-                // 10초간 대기 후 결과 반환
-                .block(Duration.ofSeconds(10));
+                // 15초간 대기 후 결과 반환
+                .block(Duration.ofSeconds(15));
     }
 
     /**
@@ -156,7 +165,7 @@ public class JobOpenApiClient {
                         .filter(throwable -> throwable instanceof CustomException &&
                                 ((CustomException) throwable).getErrorCode() == ErrorCode.EXTERNAL_API_SERVER_ERROR)) // 4xx 클라이언트 오류는 재시도해도 성공할 가능성이 낮으므로, 재시도 대상에서 제외
                 .doOnError(e -> log.error("Open API 'getJobInfo' 호출 실패", e))
-                .block(Duration.ofSeconds(60));
+                .block(Duration.ofSeconds(15));
     }
 
 }
