@@ -32,7 +32,7 @@ public class JobService {
 
     // Redis 키 접두사
     private static final String KEY_JOB_LIST = "jobs:list:"; // 목록 페이지 전체 캐시
-        // ex. jobs:list:loc:서울:emp:CM0101:p:1:s:10
+        // ex. jobs:list:search:서울:emp:CM0101:p:1:s:10
     private static final String KEY_JOB_DETAIL = "job:detail:"; // 상세 페이지 전체 캐시
         // ex. job:detail:{jobId}
     private static final String KEY_JOB_EXTRA = "job:extra:"; // 고용형태, 직종 캐시용
