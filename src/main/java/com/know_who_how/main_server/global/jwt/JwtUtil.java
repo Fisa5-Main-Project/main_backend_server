@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtUtil {
     private final JwtProperties jwtProperties;
+    private final com.know_who_how.main_server.user.repository.UserRepository userRepository;
 
     // 서명 키
     private Key accessKey;
@@ -89,22 +90,11 @@ public class JwtUtil {
                 .parseSignedClaims(token)
                 .getPayload();
 
-        // Null-safe 하게 권한 정보 추출
-        String authoritiesClaim = claims.get("authorities", String.class);
-        Collection<? extends GrantedAuthority> authorities;
+        Long userId = Long.parseLong(claims.getSubject());
+        com.know_who_how.main_server.global.entity.User.User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (authoritiesClaim == null || authoritiesClaim.trim().isEmpty()) {
-            authorities = Collections.emptyList(); // 권한이 없는 경우
-        } else {
-            authorities = Arrays.stream(authoritiesClaim.split(","))
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
-        }
-
-        // Spring Security의 User 객체 사용 (UserDetails 구현체)
-        User principal = new User(claims.getSubject(), "", authorities);
-
-        return new UsernamePasswordAuthenticationToken(principal, token, authorities);
+        return new UsernamePasswordAuthenticationToken(user, token, user.getAuthorities());
     }
 
     // 유효성 검사 (용도별 분리)

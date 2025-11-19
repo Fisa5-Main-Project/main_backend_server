@@ -61,12 +61,15 @@ public class User implements UserDetails {
     @Column(name = "provider_id", unique = true)
     private String providerId; // OAuth2 제공자별 고유 ID
 
+    @Column(name = "user_mydata_registration", nullable = false)
+    private boolean userMydataRegistration; // 마이데이터 연동 여부 (기본값: false)
+
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId, boolean userMydataRegistration) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
@@ -77,6 +80,7 @@ public class User implements UserDetails {
         this.investmentTendancy = investmentTendancy;
         this.provider = provider;
         this.providerId = providerId;
+        this.userMydataRegistration = userMydataRegistration;
         this.roles.add("ROLE_USER"); // 회원가입 시 기본 권한
     }
 
@@ -84,6 +88,10 @@ public class User implements UserDetails {
     public void updateSocialInfo(String provider, String providerId) {
         this.provider = provider;
         this.providerId = providerId;
+    }
+
+    public void updateAssetTotal(Long assetTotal) {
+        this.assetTotal = assetTotal;
     }
 
     // === UserDetails 인터페이스 구현 메서드 ===
