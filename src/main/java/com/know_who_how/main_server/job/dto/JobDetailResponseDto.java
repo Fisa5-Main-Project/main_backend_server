@@ -21,5 +21,5 @@ public class JobDetailResponseDto {
     private String jobCategory;
     private String description;
     private String applyMethod;
-    private String hompageUrl;
+    private String homepageUrl;
 }

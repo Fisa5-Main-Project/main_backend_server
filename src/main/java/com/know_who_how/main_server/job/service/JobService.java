@@ -212,7 +212,7 @@ public class JobService {
                 .deadlineStatus(deadlineStatus) // "D-7", "오늘 마감" 등
                 .description(detailItem.getDetCnts())
                 .applyMethod(mapApplyMethod(detailItem.getAcptMthdCd()))
-                .hompageUrl(detailItem.getHomepage())
+                .homepageUrl(detailItem.getHomepage())
                 .endDate(displayEndDate) // "yyyy-MM-dd"
                 .employmentType(extraData.getEmploymentType()) // Redis에서 가져온 값
                 .jobCategory(extraData.getJobCategory())       // Redis에서 가져온 값
