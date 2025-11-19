@@ -117,20 +117,21 @@ public class JobService {
         String extraDataKey = KEY_JOB_EXTRA + jobId;
         JobExtraDataDto extraData = (JobExtraDataDto) redisUtil.get(extraDataKey);
 
+        JobExtraDataDto transformedExtraData;
+
         if (extraData == null) {
             // 사용자가 리스트 조회를 거치지 않고 상세 URL로 바로 접근한 경우
             // '고용 형태', '직종'은 정보 없음으로 처리
             log.warn("[Cache MISS] 'job:extra' 데이터 없음. Key: {}", extraDataKey);
-            extraData = new JobExtraDataDto("정보 없음", "정보 없음");
+            transformedExtraData = new JobExtraDataDto(EmploymentType.UNKNOWN.getDisplayName(), "정보 없음");
         }else{
             log.info("[Cache HIT] Key: {}", extraDataKey);
-        }
+            transformedExtraData = JobExtraDataDto.builder()
+                    .employmentType(mapEmploymentType(extraData.getEmploymentType()))
+                    .jobCategory(extraData.getJobCategory())
+                    .build();
 
-        // 상세보기 DTO에서도 '고용형태'변환 로직
-        JobExtraDataDto transformedExtraData = JobExtraDataDto.builder()
-                .employmentType(mapEmploymentType(extraData.getEmploymentType()))
-                .jobCategory(extraData.getJobCategory())
-                .build();
+        }
 
         // 4. 2개 데이터(API 응답 + Redis 캐시)를 조합하여 DTO 매핑
         JobDetailResponseDto responseDto = mapToJobDetailDto(detailItem, transformedExtraData);
