@@ -70,6 +70,7 @@ public class JobOpenApiClient {
 
     /**
      * 1. 채용 공고 리스트 조회 (getJobList)
+     *
      * @param search
      */
     public ExternalApiResponse<ExternalJobListItems> fetchJobs(String search, String empType, int page, int size) {
@@ -93,7 +94,7 @@ public class JobOpenApiClient {
                         clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
                             log.error("Open API 4xx Error: status = {}, body={}", clientResponse.statusCode(), errorBody);
                             ErrorCode errorCode;
-                            switch(clientResponse.statusCode().value()){
+                            switch (clientResponse.statusCode().value()) {
                                 case 401:
                                     errorCode = ErrorCode.EXTERNAL_API_UNAUTHORIZED;
                                     break;
@@ -150,8 +151,22 @@ public class JobOpenApiClient {
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, clientResponse ->
                         clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
-                            log.error("Open API 4xx Error: {}", errorBody);
-                            return Mono.error(new CustomException(ErrorCode.EXTERNAL_API_NOT_FOUND));
+                            log.error("Open API 4xx Error: status = {}, body={}", clientResponse.statusCode(), errorBody);
+                            ErrorCode errorCode;
+                            switch (clientResponse.statusCode().value()) {
+                                case 401:
+                                    errorCode = ErrorCode.EXTERNAL_API_UNAUTHORIZED;
+                                    break;
+                                case 403:
+                                    errorCode = ErrorCode.EXTERNAL_API_FORBIDDEN;
+                                    break;
+                                case 429:
+                                    errorCode = ErrorCode.EXTERNAL_API_RATE_LIMIT;
+                                    break;
+                                default:
+                                    errorCode = ErrorCode.EXTERNAL_API_NOT_FOUND;
+                            }
+                            return Mono.error(new CustomException(errorCode));
                         })
                 )
                 .onStatus(HttpStatusCode::is5xxServerError, clientResponse ->
