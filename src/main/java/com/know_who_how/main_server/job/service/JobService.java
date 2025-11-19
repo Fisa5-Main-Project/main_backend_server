@@ -8,6 +8,8 @@ import com.know_who_how.main_server.job.dto.*;
 import com.know_who_how.main_server.job.dto.external.ExternalApiResponse;
 import com.know_who_how.main_server.job.dto.external.ExternalJobDetailItemWrapper;
 import com.know_who_how.main_server.job.dto.external.ExternalJobListItems;
+import com.know_who_how.main_server.job.type.ApplyMethod;
+import com.know_who_how.main_server.job.type.EmploymentType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -314,47 +316,16 @@ public class JobService {
      * @return (온라인, 이메일 ...)
      */
     private String mapApplyMethod(String acptMthdCd) {
-        if (acptMthdCd == null) {
-            return "정보 없음";
-        }
-
-        switch (acptMthdCd) {
-            case "CM0801":
-                return "온라인";
-            case "CM0802":
-                return "이메일";
-            case "CM0803":
-                return "팩스";
-            case "CM0804":
-                return "방문";
-            default:
-                return "기타";
-        }
+        return ApplyMethod.fromCode(acptMthdCd).getDisplayName();
     }
 
     /**
+     * 고용형태 코드나 이름을 한글 문자여롤 변환
      *
-     * @param codeOrName 고용형태코드나 이름
+     * @param codeOrName 고용형태코드나 이름 (CM0101, 정규직 등)
      * @return (정규직, 계약직, ...)
      */
     private String mapEmploymentType(String codeOrName) {
-        if(codeOrName == null) {
-            return "정보 없음";
-        }
-        switch (codeOrName) {
-            case "CM0101":
-                return "정규직";
-            case "CM0102":
-                return "계약직";
-            case "CM0103":
-                return "시간제일자리";
-            case "CM0104":
-                return "일당직";
-            case "CM0105":
-                return "기타";
-            default:
-                return codeOrName;
-        }
+        return EmploymentType.fromCode(codeOrName).getDisplayName();
     }
-
 }
