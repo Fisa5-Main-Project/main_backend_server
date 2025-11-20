@@ -76,16 +76,21 @@ public class JobOpenApiClient {
     public ExternalApiResponse<ExternalJobListItems> fetchJobs(String search, String empType, int page, int size) {
         // .get()부터 .block()까지가 하나의 비동기 요청 파이프라인
         return webClient.get()// 1. HTTP GET요청 시작
-                .uri(uriBuilder -> uriBuilder //2. URL 구성
-                        .path("/SenuriService/getJobList")
-                        .queryParam("serviceKey", serviceKey) //2-1. 쿼리파라미터
-                        .queryParam("pageNo", page)
-                        .queryParam("numOfRows", size)
-                        .queryParam("search", search)
-                        .queryParam("emplymShp", empType)
-                        .queryParam("type", "json") // 응답 형식 json으로 고정
-                        .build()
-                )
+                .uri(uriBuilder -> {
+                    var builder = uriBuilder //2. URL 구성
+                            .path("/SenuriService/getJobList")
+                            .queryParam("serviceKey", serviceKey) //2-1. 쿼리파라미터
+                            .queryParam("pageNo", page)
+                            .queryParam("numOfRows", size)
+                            .queryParam("search", search)
+                            .queryParam("type", "json");// 응답 형식 json으로 고정
+
+                    if (empType != null && !empType.isBlank() && !"ALL".equalsIgnoreCase(empType)) {
+                        builder.queryParam("emplymShp", empType);
+                    }
+
+                    return builder.build();
+                })
                 .accept(MediaType.APPLICATION_JSON) // 3. HTTP 'Accept' 헤더를 '/application/json'으로 설정
                 .retrieve() // 4. 실제 요청 실행, 응답 처리 준비
 

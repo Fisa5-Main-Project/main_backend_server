@@ -44,6 +44,9 @@ public class JobService {
 
     // 1. 채용공고 리스트 조회
     public JobListResponseDto getJobList(String search, String empType, int page, int size) {
+        if("ALL".equalsIgnoreCase(empType)) {
+            empType = null;
+        }
         String cacheKey = String.format("%ssearch:%s:emp:%s:p:%d:s:%d",
                 KEY_JOB_LIST, search, empType, page, size);
 
