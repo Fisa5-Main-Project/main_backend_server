@@ -5,6 +5,7 @@ import lombok.Getter;
 import java.util.Arrays;
 
 public enum EmploymentType {
+    ALL(null, "전체"),
     FULL_TIME("CM0101", "정규직"),
     CONTRACT("CM0102", "계약직"),
     PART_TIME("CM0103", "시간제일자리"),
@@ -28,6 +29,10 @@ public enum EmploymentType {
     public static EmploymentType fromCode(String code) {
         if (code == null) {
             return UNKNOWN;
+        }
+
+        if(code.equalsIgnoreCase("ALL")) {
+            return ALL;
         }
         // Open API 리스트 응답에서 코드 대신 이름(예: '정규직')이 올 수 있으므로 이름으로도 매핑 시도
         return Arrays.stream(values())
