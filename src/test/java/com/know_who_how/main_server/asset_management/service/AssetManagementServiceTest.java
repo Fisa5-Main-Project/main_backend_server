@@ -18,6 +18,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -29,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+@MockitoSettings(strictness = Strictness.LENIENT)
 @ExtendWith(MockitoExtension.class)
 class AssetManagementServiceTest {
 
@@ -56,7 +59,7 @@ class AssetManagementServiceTest {
     @Test
     @DisplayName("[실패] 포트폴리오 조회 시 사용자 정보가 없으면 예외 발생")
     void getPortfolio_should_throwException_when_userInfoNotFound() {
-        // given
+        given(userRepository.findById(any())).willReturn(Optional.of(mockUser));
         given(userInfoRepository.findByUser(any(User.class))).willReturn(Optional.empty());
 
         // when & then
@@ -70,18 +73,19 @@ class AssetManagementServiceTest {
     void getPortfolio_should_recommendDeposit_when_idleCashIsSufficient() {
         // given
         given(mockUserInfo.getAnnualIncome()).willReturn(60000000L); // 연봉 6000만
+        given(mockUserInfo.getExpectationMonthlyCost()).willReturn(2000000L); // 월 예상 소비 200만
         given(mockUserInfo.getFixedMonthlyCost()).willReturn(1000000L); // 월 고정비 100만
         given(mockUserInfo.getGoalTargetDate()).willReturn(LocalDate.now().plusYears(6)); // 목표 기간 6년 (저축 점수 감소 목적)
         // 월 순저축 여력 = 400만
         given(mockUserInfo.getUser()).willReturn(mockUser);
-        given(mockUser.getAssetTotal()).willReturn(50000000L); // 총자산 5000만
         given(mockUser.getBirth()).willReturn(LocalDate.now().minusYears(30)); // 나이 30세
+        given(userRepository.findById(any())).willReturn(Optional.of(mockUser));
         given(userInfoRepository.findByUser(mockUser)).willReturn(Optional.of(mockUserInfo));
 
         // idleCashAssets를 충분히 높게 설정하여 '목돈 예치형'이 되도록
         com.know_who_how.main_server.global.entity.Asset.Asset mockAsset = org.mockito.Mockito.mock(com.know_who_how.main_server.global.entity.Asset.Asset.class);
         given(mockAsset.getType()).willReturn(com.know_who_how.main_server.global.entity.Asset.AssetType.CURRENT);
-        given(mockAsset.getBalance()).willReturn(java.math.BigInteger.valueOf(10000000L)); // 유휴자금 1000만
+        given(mockAsset.getBalance()).willReturn(java.math.BigDecimal.valueOf(10000000L)); // 유휴자금 1000만
         given(assetsRepository.findByUser(mockUser)).willReturn(java.util.List.of(mockAsset)); // 부채 0
 
         given(userKeywordRepository.findByUser(any(User.class))).willReturn(new ArrayList<>()); // 키워드 없음
@@ -99,7 +103,7 @@ class AssetManagementServiceTest {
         assertThat(response.cashFlowDiagnostic().diagnosticType()).isEqualTo("목돈 예치형");
         assertThat(response.cashFlowDiagnostic().productName()).isEqualTo("WON플러스 예금");
         assertThat(response.prediction().predictionType()).isEqualTo("예금 시뮬레이션");
-        assertThat(response.goalMetrics().totalAsset()).isEqualTo(50000000L);
+        assertThat(response.goalMetrics().totalAsset()).isEqualTo(10000000L);
     }
 
 

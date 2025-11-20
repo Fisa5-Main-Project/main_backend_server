@@ -100,7 +100,7 @@ class AssetManagementControllerTest {
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(mockUser, "", java.util.Collections.emptyList());
 
         PortfolioResponse.GoalMetricsDto goalMetrics = new PortfolioResponse.GoalMetricsDto(
-                LocalDate.now().plusYears(5), 5, 100000000L, 50000000L, 40000000L, 40
+                LocalDate.now().plusYears(5), 5L, 100000000L, 50000000L, 40000000L, 40, 1500000L
         );
         PortfolioResponse.CashFlowDto cashFlow = new PortfolioResponse.CashFlowDto(
                 "월 저축형", 1000000L, null, "은행 월 저축형 상품", 3.5
