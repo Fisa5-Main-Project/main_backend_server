@@ -47,10 +47,6 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 50)
     private String name;
 
-    // [추가] 마이데이터 등록 여부 (User 기준으로 이전)
-    @Column(name = "user_mydata_registration")
-    private Boolean userMydataRegistration;
-
     @Column(name = "asset_total")
     private Long assetTotal;
 
@@ -65,24 +61,26 @@ public class User implements UserDetails {
     @Column(name = "provider_id", unique = true)
     private String providerId; // OAuth2 제공자별 고유 ID
 
+    @Column(name = "user_mydata_registration", nullable = false)
+    private boolean userMydataRegistration; // 마이데이터 연동 여부 (기본값: false)
+
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Boolean userMydataRegistration, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId, boolean userMydataRegistration) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
         this.birth = birth;
         this.gender = gender;
         this.name = name;
-        // [변경] 마이데이터 등록 여부 기본값 또는 전달값 사용(null이면 false)
-        this.userMydataRegistration = (userMydataRegistration != null) ? userMydataRegistration : false;
         this.assetTotal = assetTotal;
         this.investmentTendancy = investmentTendancy;
         this.provider = provider;
         this.providerId = providerId;
+        this.userMydataRegistration = userMydataRegistration;
         this.roles.add("ROLE_USER"); // 회원가입 시 기본 권한
     }
 
@@ -92,6 +90,9 @@ public class User implements UserDetails {
         this.providerId = providerId;
     }
 
+    public void updateAssetTotal(Long assetTotal) {
+        this.assetTotal = assetTotal;
+    }
     // === UserDetails 인터페이스 구현 메서드 ===
 
     @Override

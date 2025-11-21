@@ -27,8 +27,7 @@ public class MydataProperties {
 
     @Getter @Setter
     public static class RsProperties {
-        // mydata.rs.pension-api, mydata.rs.asset-api
-        private String pensionApi;
-        private String assetApi;
+        // my-client-id.rs.my-data-api
+        private String myDataApi;
     }
 }

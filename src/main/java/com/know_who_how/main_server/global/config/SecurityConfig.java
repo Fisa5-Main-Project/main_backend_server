@@ -9,7 +9,14 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,7 +30,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -42,6 +51,8 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     // [추가] OAuth2 로그인 성공 핸들러 (AT/RT 동기화)
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+
+    private static final Logger sessionLog = LoggerFactory.getLogger(SecurityConfig.class);
 
     // [변경] OAuth2 Client 도입: 로그인 시작 경로 허용 추가
     private static final String[] AUTH_WHITELIST = {
@@ -117,7 +128,16 @@ public class SecurityConfig {
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         // [추가] OAuth2 Client 로그인 활성화 (성공 핸들러 등록)
-        http.oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler));
+        http.oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(authorization -> authorization
+                        .authorizationRequestRepository(new LoggingHttpSessionOAuth2AuthorizationRequestRepository())
+                )
+                .successHandler(oAuth2LoginSuccessHandler)
+                .failureHandler((request, response, exception) -> {
+                    sessionLog.error("OAuth2 Login Failed: {}", exception.getMessage(), exception);
+                    response.sendRedirect("http://192.168.1.66:3000/login?error");
+                })
+        );
 
         return http.build();
     }
@@ -126,8 +146,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // FE 주소 정해지면 추가
-        configuration.setAllowedOrigins(List.of("https://knowwhohow.site", "http://localhost:3000"));
+        // FE 주소 정해지면 추가 "https://knowwhohow.site", "http://localhost:3000",
+        configuration.setAllowedOrigins(List.of("http://192.168.1.66:3000"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
@@ -137,5 +157,19 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration); // 모든 경로에 이 CORS 설정 적용
         return source;
+    }
+
+    @Bean
+    public Filter sessionLogFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+                    throws ServletException, IOException {
+                var session = request.getSession(false);
+                String sid = (session != null) ? session.getId() : "null";
+                sessionLog.info("SESSION_TRACE sid={} uri={} method={}", sid, request.getRequestURI(), request.getMethod());
+                chain.doFilter(request, response);
+            }
+        };
     }
 }

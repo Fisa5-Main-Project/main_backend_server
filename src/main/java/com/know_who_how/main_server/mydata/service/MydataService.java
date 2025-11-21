@@ -11,7 +11,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class MydataService {
 
     private final MydataProperties mydataProps;
-    // [추가] OAuth2 Client(WebClient) 기반 RS 호출용
+    // OAuth2 Client(WebClient) 기반 RS 호출용
+    // 프론트에서 apiClient.get('mydata/pension') 호출 받고 RS에 GET요청
     private final WebClient mydataWebClient;
 
     /**
@@ -20,8 +21,8 @@ public class MydataService {
      * OAuth2 Client(WebClient)를 통해 RS를 프록시 호출한다.
      */
     @Transactional(readOnly = true)
-    public String getPension(Long userId) {
-        String url = mydataProps.getRs().getPensionApi();
+    public String getMyData() {
+        String url = mydataProps.getRs().getMyDataApi();
         return mydataWebClient
                 .get()
                 .uri(url)

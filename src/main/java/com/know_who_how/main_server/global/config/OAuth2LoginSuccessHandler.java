@@ -115,10 +115,18 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
                     mydata.updateTokenMeta(expiresIn, scope);
                     mydataRepository.save(mydata);
                 }
+                // 로딩페이지로 리다이렉트 (토큰 URL 전달)
+                String targetUrl = org.springframework.web.util.UriComponentsBuilder.fromUriString("http://192.168.1.66:3000/mydata/loading")
+                        .queryParam("access_token", at)
+                        .queryParam("refresh_token", rt)
+                        .build().toUriString();
+                response.sendRedirect(targetUrl);
+                return;
             }
         }
 
-        // 로딩페이지로 리다이렉트
-        response.sendRedirect("http://localhost:3000/mydata/loading");
+        // 토큰이 없거나 실패 시 에러 페이지로 리다이렉트
+        // TODO 배포 시 실제 경로로 맞춰야 함
+        response.sendRedirect("http://192.168.1.66:3000/login?error");
     }
 }

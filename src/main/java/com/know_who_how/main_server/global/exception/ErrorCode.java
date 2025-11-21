@@ -43,7 +43,16 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "AUTH_015", "해당 사용자를 찾을 수 없습니다."),
     SIGNUP_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "AUTH_016", "유효하지 않은 회원가입 토큰입니다."),
     SOCIAL_ACCOUNT_ALREADY_REGISTERED(HttpStatus.CONFLICT, "AUTH_017", "이미 해당 소셜 계정으로 가입된 유저입니다."),
-    OAUTH_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH_018", "소셜 로그인에 실패했습니다.");
+    OAUTH_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH_018", "소셜 로그인에 실패했습니다."),
+
+    // Common Exception
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "COMMON_001", "입력값이 유효하지 않습니다."),
+
+    // portfolio exception
+    USER_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "PORT_001", "사용자의 재무 정보를 찾을 수 없습니다."),
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PORT_002", "해당 금융 상품을 찾을 수 없습니다."),
+
+    ;
 
 
     private final HttpStatus status;    // HTTP 상태
