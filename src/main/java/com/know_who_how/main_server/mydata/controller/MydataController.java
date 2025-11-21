@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/mydata")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Validated
 public class MydataController {
@@ -25,14 +25,12 @@ public class MydataController {
      * RS 연금 API 호출 엔드포인트.
      * 현재 로그인 사용자의 마이데이터 연금 정보를 프록시로 반환한다.
      */
-    @GetMapping("/pension")
-    public ResponseEntity<ApiResponse<?>> getPension(Authentication authentication) {
+    @GetMapping("/my-data")
+    public ResponseEntity<ApiResponse<?>> getMyData(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
             throw new CustomException(ErrorCode.NOT_LOGIN_USER);
         }
-        UserDetails principal = (UserDetails) authentication.getPrincipal();
-        Long userId = Long.parseLong(principal.getUsername());
-        String body = mydataService.getPension(userId);
+        String body = mydataService.getMyData();
         return ResponseEntity.ok(ApiResponse.onSuccess(body));
     }
 }
