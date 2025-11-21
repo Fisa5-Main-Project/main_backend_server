@@ -93,7 +93,6 @@ public class User implements UserDetails {
     public void updateAssetTotal(Long assetTotal) {
         this.assetTotal = assetTotal;
     }
-
     // === UserDetails 인터페이스 구현 메서드 ===
 
     @Override
@@ -140,5 +139,10 @@ public class User implements UserDetails {
         
         // 계정이 활성화되었는지
         return true;
+    }
+
+    // [추가] 마이데이터 연동 완료 상태로 마킹
+    public void markMydataRegistered() {
+        this.userMydataRegistration = true;
     }
 }

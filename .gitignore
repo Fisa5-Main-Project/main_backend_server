@@ -9,7 +9,7 @@
 .gradle/
 .idea/
 .build/
-
+build
 # CMake
 cmake-build-*/
 

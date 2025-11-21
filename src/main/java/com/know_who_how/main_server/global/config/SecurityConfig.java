@@ -9,7 +9,14 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,13 +30,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
- * Spring Security의 핵심 보안 설정을 정의하는 파일입니다.
- * API 경로별 접근 권한(로그인 필요 여부 등)을 설정하고,
- * JWT 토큰 검증 필터 및 비밀번호 암호화(PasswordEncoder) 방식을 등록합니다.
+ * Spring Security 보안 설정
+ * - 접근 제어, JWT 필터, CORS, OpenAPI 유지
+ * - [변경] BFF + OAuth2 로그인 지원: 세션 정책/허용 경로/성공 핸들러 추가
  */
 @Configuration
 @EnableWebSecurity
@@ -40,13 +49,20 @@ public class SecurityConfig {
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final JwtAuthFilter jwtAuthFilter; // JwtAuthFilter 주입
     private final JwtUtil jwtUtil;
+    // [추가] OAuth2 로그인 성공 핸들러 (AT/RT 동기화)
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final AppProperties appProperties;
 
-    // [신규] 인증이 필요 없는 API 경로 (v1 적용)
+    private static final Logger sessionLog = LoggerFactory.getLogger(SecurityConfig.class);
+
+    // [변경] OAuth2 Client 도입: 로그인 시작 경로 허용 추가
     private static final String[] AUTH_WHITELIST = {
+
             "/api/v1/auth/login",                   // 로그인
             "/api/v1/auth/reissue",                 // 토큰 재발급
             "/api/v1/auth/signup/**",               // 회원가입 관련 모든 경로
             "/login/oauth2/code/**",                // 소셜 로그인 콜백 경로
+            "/oauth2/authorization/**",      // [추가] OAuth2 로그인 시작 경로 허용
             "/swagger-ui.html",                     // Swagger UI HTML
             "/swagger-ui/**",                       // Swagger UI (JS, CSS 등)
             "/v3/api-docs/**",                      // OpenAPI 3.0 Docs
@@ -89,14 +105,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정 적용
-                .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화
-                .formLogin(AbstractHttpConfigurer::disable) // 폼 로그인 비활성화
-                .httpBasic(AbstractHttpConfigurer::disable) // HTTP 기본 인증 비활성화
-
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 세션 사용 안 함
-                )
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
 
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(jwtAuthEntryPoint)    // 401 (인증 실패)
@@ -113,6 +125,21 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class);
 
+        // [변경] BFF 세션 기반 OAuth2 로그인 지원: 세션 정책 IF_REQUIRED 재설정
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+
+        // [추가] OAuth2 Client 로그인 활성화 (성공 핸들러 등록)
+        http.oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(authorization -> authorization
+                        .authorizationRequestRepository(new LoggingHttpSessionOAuth2AuthorizationRequestRepository())
+                )
+                .successHandler(oAuth2LoginSuccessHandler)
+                .failureHandler((request, response, exception) -> {
+                    sessionLog.error("OAuth2 Login Failed: {}", exception.getMessage(), exception);
+                    response.sendRedirect(appProperties.getFrontendBaseUrl() + "/login?error");
+                })
+        );
+
         return http.build();
     }
 
@@ -120,8 +147,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // FE 주소 정해지면 추가
-        configuration.setAllowedOrigins(List.of("https://knowwhohow.site","http://localhost:3000"));
+        // FE 주소 정해지면 추가 "https://knowwhohow.site", "http://localhost:3000",
+        var allowedOrigins = appProperties.getAllowedOrigins();
+        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+            configuration.setAllowedOrigins(allowedOrigins);
+        }
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
@@ -131,5 +161,19 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration); // 모든 경로에 이 CORS 설정 적용
         return source;
+    }
+
+    @Bean
+    public Filter sessionLogFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+                    throws ServletException, IOException {
+                var session = request.getSession(false);
+                String sid = (session != null) ? session.getId() : "null";
+                sessionLog.info("SESSION_TRACE sid={} uri={} method={}", sid, request.getRequestURI(), request.getMethod());
+                chain.doFilter(request, response);
+            }
+        };
     }
 }
