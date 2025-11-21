@@ -51,6 +51,7 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     // [추가] OAuth2 로그인 성공 핸들러 (AT/RT 동기화)
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final AppProperties appProperties;
 
     private static final Logger sessionLog = LoggerFactory.getLogger(SecurityConfig.class);
 
@@ -135,7 +136,7 @@ public class SecurityConfig {
                 .successHandler(oAuth2LoginSuccessHandler)
                 .failureHandler((request, response, exception) -> {
                     sessionLog.error("OAuth2 Login Failed: {}", exception.getMessage(), exception);
-                    response.sendRedirect("http://192.168.1.66:3000/login?error");
+                    response.sendRedirect(appProperties.getFrontendBaseUrl() + "/login?error");
                 })
         );
 
@@ -147,7 +148,10 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // FE 주소 정해지면 추가 "https://knowwhohow.site", "http://localhost:3000",
-        configuration.setAllowedOrigins(List.of("http://192.168.1.66:3000"));
+        var allowedOrigins = appProperties.getAllowedOrigins();
+        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+            configuration.setAllowedOrigins(allowedOrigins);
+        }
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

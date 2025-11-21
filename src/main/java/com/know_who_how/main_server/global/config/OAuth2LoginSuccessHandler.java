@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepo
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -48,6 +49,7 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
     private final OAuth2AuthorizedClientRepository authorizedClientRepository;
     private final MydataRepository mydataRepository;
     private final UserRepository userRepository;
+    private final AppProperties appProperties;
 
 
     /**
@@ -59,6 +61,7 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
      */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
+        String frontendBaseUrl = appProperties.getFrontendBaseUrl();
         // OAuth2AuthorizedClient에서 토큰 추출
         // OAuth2AuthenticationToken인지 확인
         if (authentication instanceof OAuth2AuthenticationToken oauth2Auth) {
@@ -116,10 +119,11 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
                     mydataRepository.save(mydata);
                 }
                 // 로딩페이지로 리다이렉트 (토큰 URL 전달)
-                String targetUrl = org.springframework.web.util.UriComponentsBuilder.fromUriString("http://192.168.1.66:3000/mydata/loading")
+                String targetUrl = UriComponentsBuilder.fromHttpUrl(frontendBaseUrl)
+                        .path("/mydata/loading")
                         .queryParam("access_token", at)
-                        .queryParam("refresh_token", rt)
-                        .build().toUriString();
+                        .build()
+                        .toUriString();
                 response.sendRedirect(targetUrl);
                 return;
             }
@@ -127,6 +131,6 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
 
         // 토큰이 없거나 실패 시 에러 페이지로 리다이렉트
         // TODO 배포 시 실제 경로로 맞춰야 함
-        response.sendRedirect("http://192.168.1.66:3000/login?error");
+        response.sendRedirect(frontendBaseUrl + "/login?error");
     }
 }
