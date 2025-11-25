@@ -1,21 +1,15 @@
 package com.know_who_how.main_server.user.service;
 
-import com.know_who_how.main_server.global.entity.Asset.AssetType;
+import com.know_who_how.main_server.global.entity.Asset.Asset;
 import com.know_who_how.main_server.global.entity.User.User;
-import com.know_who_how.main_server.global.exception.CustomException;
-import com.know_who_how.main_server.global.exception.ErrorCode;
-import com.know_who_how.main_server.user.dto.AssetDto;
-import com.know_who_how.main_server.user.dto.PensionAssetDto;
+import com.know_who_how.main_server.user.dto.UserAssetResponseDto;
 import com.know_who_how.main_server.user.dto.UserResponseDto;
 import com.know_who_how.main_server.user.repository.AssetsRepository;
-import com.know_who_how.main_server.user.repository.PensionRepository;
-import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,9 +17,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class UserService {
 
-    private final UserRepository userRepository;
     private final AssetsRepository assetsRepository;
-    private final PensionRepository pensionRepository;
 
     public UserResponseDto getUserInfo(User user) {
         return UserResponseDto.from(resolveUser(user));
@@ -65,5 +57,12 @@ public class UserService {
         }
         return userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public List<UserAssetResponseDto> getUserAssets(User user) {
+        List<Asset> assets = assetsRepository.findByUser(user);
+        return assets.stream()
+                .map(UserAssetResponseDto::from)
+                .collect(Collectors.toList());
     }
 }
