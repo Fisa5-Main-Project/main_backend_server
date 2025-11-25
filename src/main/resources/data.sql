@@ -49,9 +49,9 @@ VALUES (
        );
 
 -- Term (기존 데이터 유지)
-INSERT IGNORE INTO term (is_required, term_name) VALUES (true, '서비스 이용약관');
-INSERT IGNORE INTO term (is_required, term_name) VALUES (true, '개인정보 수집 및 이용 동의');
-INSERT IGNORE INTO term (is_required, term_name) VALUES (false, '마케팅 정보 수신 동의');
+INSERT IGNORE INTO term (is_required,term_id, term_name) VALUES (true,1, '서비스 이용약관');
+INSERT IGNORE INTO term (is_required,term_id, term_name) VALUES (true,2, '개인정보 수집 및 이용 동의');
+INSERT IGNORE INTO term (is_required,term_id, term_name) VALUES (false,3, '마케팅 정보 수신 동의');
 
 -- Keyword (Explicit IDs to ensure AuthService works correctly)
 INSERT IGNORE INTO keyword (keyword_id, name) VALUES (1, '안정적 생활비');
