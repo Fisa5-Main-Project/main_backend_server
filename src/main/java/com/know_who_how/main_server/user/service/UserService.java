@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,13 +41,21 @@ public class UserService {
 
     public List<PensionAssetDto> getUserPensionAssets(User user) {
         var managedUser = resolveUser(user);
-        return assetsRepository.findByUser(managedUser)
+        List<com.know_who_how.main_server.global.entity.Asset.Asset> pensionAssets = assetsRepository.findByUser(managedUser)
                 .stream()
                 .filter(asset -> asset.getType() == AssetType.PENSION)
-                .map(asset -> {
-                    var pension = pensionRepository.findById(asset.getAssetId()).orElse(null);
-                    return PensionAssetDto.from(asset, pension);
-                })
+                .collect(Collectors.toList());
+
+        List<Long> pensionAssetIds = pensionAssets.stream()
+                .map(com.know_who_how.main_server.global.entity.Asset.Asset::getAssetId)
+                .collect(Collectors.toList());
+
+        Map<Long, com.know_who_how.main_server.global.entity.Asset.Pension.Pension> pensionsById = pensionRepository.findAllById(pensionAssetIds)
+                .stream()
+                .collect(Collectors.toMap(com.know_who_how.main_server.global.entity.Asset.Pension.Pension::getAssetId, p -> p));
+
+        return pensionAssets.stream()
+                .map(asset -> PensionAssetDto.from(asset, pensionsById.get(asset.getAssetId())))
                 .collect(Collectors.toList());
     }
 

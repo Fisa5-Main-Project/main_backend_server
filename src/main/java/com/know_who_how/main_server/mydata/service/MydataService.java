@@ -29,7 +29,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -113,17 +112,20 @@ public class MydataService {
 
         List<MydataDto.AssetDto> assetDtos = data.getAssets() != null ? data.getAssets() : Collections.emptyList();
 
-        List<Asset> assetsToSave = assetDtos.stream()
-                .map(dto -> toAssetEntity(dto, managedUser))
-                .filter(Objects::nonNull)
+        List<AssetMapping> assetMappings = assetDtos.stream()
+                .map(dto -> new AssetMapping(dto, toAssetEntity(dto, managedUser)))
+                .filter(mapping -> mapping.asset() != null)
+                .collect(Collectors.toList());
+
+        List<Asset> assetsToSave = assetMappings.stream()
+                .map(AssetMapping::asset)
                 .collect(Collectors.toList());
         assetsRepository.saveAll(assetsToSave);
 
-        List<Pension> pensionsToSave = assetsToSave.stream()
-                .filter(asset -> asset.getType() == AssetType.PENSION)
-                .map(asset -> findMatchingPensionDto(assetDtos, asset))
-                .flatMap(Optional::stream)
-                .map(dto -> toPensionEntity(dto, assetsToSave))
+        List<Pension> pensionsToSave = assetMappings.stream()
+                .filter(mapping -> mapping.asset().getType() == AssetType.PENSION)
+                .filter(mapping -> mapping.dto().getPensionDetails() != null)
+                .map(mapping -> toPensionEntity(mapping.dto(), mapping.asset()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         pensionRepository.saveAll(pensionsToSave);
@@ -147,24 +149,7 @@ public class MydataService {
                 .build();
     }
 
-    private Optional<MydataDto.AssetDto> findMatchingPensionDto(List<MydataDto.AssetDto> assetDtos, Asset asset) {
-        return assetDtos.stream()
-                .filter(a -> "PENSION".equalsIgnoreCase(a.getAssetType()))
-                .filter(a -> Objects.equals(asset.getBankCode(), a.getBankCode()))
-                .filter(a -> a.getPensionDetails() != null)
-                .findFirst();
-    }
-
-    private Pension toPensionEntity(MydataDto.AssetDto pensionAssetDto, List<Asset> savedAssets) {
-        Asset asset = savedAssets.stream()
-                .filter(a -> a.getType() == AssetType.PENSION)
-                .filter(a -> Objects.equals(a.getBankCode(), pensionAssetDto.getBankCode()))
-                .findFirst()
-                .orElse(null);
-        if (asset == null) {
-            return null;
-        }
-
+    private Pension toPensionEntity(MydataDto.AssetDto pensionAssetDto, Asset asset) {
         MydataDto.PensionDetailsDto details = pensionAssetDto.getPensionDetails();
         if (details == null) {
             return null;
@@ -200,6 +185,9 @@ public class MydataService {
                 .contribYear(details.getContribYear())
                 .totalPersonalContrib(details.getTotalPersonalContrib())
                 .build();
+    }
+
+    private record AssetMapping(MydataDto.AssetDto dto, Asset asset) {
     }
 
     private void updateUserWithMydata(User user, MydataDto data) {
