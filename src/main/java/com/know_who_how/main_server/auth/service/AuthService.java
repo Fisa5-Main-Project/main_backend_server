@@ -18,7 +18,6 @@ import com.know_who_how.main_server.user.repository.TermRepository;
 import com.know_who_how.main_server.user.repository.UserKeywordRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import com.know_who_how.main_server.user.repository.UserTermRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -355,23 +354,5 @@ public class AuthService {
                     throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
                 });
         return "사용 가능한 전화번호입니다.";
-    }
-
-    @PostConstruct
-    @Transactional
-    public void initTestUser() {
-        if (userRepository.findByLoginId("testuser1").isEmpty()) {
-            User testUser = User.builder()
-                    .loginId("testuser1")
-                    .password(passwordEncoder.encode("password123!"))
-                    .name("홍길동")
-                    .phoneNum("01011112222")
-                    .birth(LocalDate.of(2001, 3, 24))
-                    .gender(Gender.M)
-                    .investmentTendancy(InvestmentTendancy.안정추구형)
-                    .userMydataRegistration(false) // 새로 추가된 필드
-                    .build();
-            userRepository.save(testUser);
-        }
     }
 }
