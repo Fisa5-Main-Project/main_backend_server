@@ -20,6 +20,7 @@ import com.know_who_how.main_server.user.repository.UserRepository;
 import com.know_who_how.main_server.user.repository.UserTermRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -62,6 +64,8 @@ public class AuthService {
      */
     @Transactional
     public void signup(UserSignupRequestDto requestDto) {
+        log.info("Starting signup process for user: {}", requestDto.getLoginId());
+
         // === 소셜 로그인 연동 처리 (signupToken이 있는 경우) ===
         String provider = "local"; // 일반 로그인 사용자의 기본 provider를 "local"로 설정
         String providerId = null;
@@ -70,6 +74,7 @@ public class AuthService {
             String redisValue = (String) redisUtil.get(redisKey);
 
             if (redisValue == null) {
+                log.warn("Signup failed: Invalid signup token for user: {}", requestDto.getLoginId());
                 throw new CustomException(ErrorCode.SIGNUP_TOKEN_INVALID);
             }
 
@@ -79,6 +84,7 @@ public class AuthService {
 
             // 이미 해당 소셜 계정으로 가입된 유저가 있는지 최종 확인
             if (userRepository.findByProviderAndProviderId(provider, providerId).isPresent()) {
+                log.warn("Signup failed: Social account already registered for user: {}", requestDto.getLoginId());
                 throw new CustomException(ErrorCode.SOCIAL_ACCOUNT_ALREADY_REGISTERED);
             }
 
@@ -87,17 +93,22 @@ public class AuthService {
         }
 
         // 1. verificationId를 통해 SMS 인증 정보 조회
-        SmsCertificationRequestDto smsRequestDto = smsCertificationService.getUserVerificationData(requestDto.getVerificationId());
+        SmsCertificationRequestDto smsRequestDto = smsCertificationService
+                .getUserVerificationData(requestDto.getVerificationId());
 
         // 2. 아이디 중복 확인
         userRepository.findByLoginId(requestDto.getLoginId())
-                .ifPresent(user -> { throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE); });
+                .ifPresent(user -> {
+                    log.warn("Signup failed: Duplicate Login ID [{}]", requestDto.getLoginId());
+                    throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
+                });
 
         // 3. 전화번호 중복 확인 (SMS 인증 정보에서 가져온 전화번호 사용)
         userRepository.findByPhoneNum(smsRequestDto.getPhoneNum())
-                .ifPresent(user -> { throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE); });
-
-        // 4. 비밀번호 확인 (passwordConfirm 필드 제거로 인해 확인 로직 삭제)
+                .ifPresent(user -> {
+                    log.warn("Signup failed: Duplicate Phone Number [{}]", smsRequestDto.getPhoneNum());
+                    throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+                });
 
         // 5. 약관 동의 확인 및 저장
         List<Term> requiredTerms = termRepository.findByIsRequired(true);
@@ -105,6 +116,7 @@ public class AuthService {
             boolean isAgreed = requestDto.getTermAgreements().stream()
                     .anyMatch(ta -> ta.getTermId().equals(requiredTerm.getId()) && ta.getIsAgreed());
             if (!isAgreed) {
+                log.warn("Signup failed: Required term not agreed for user: {}", requestDto.getLoginId());
                 throw new CustomException(ErrorCode.REQUIRED_TERM_NOT_AGREED);
             }
         }
@@ -156,6 +168,8 @@ public class AuthService {
 
         // 9. SMS 인증 정보 삭제
         smsCertificationService.removeUserVerificationData(requestDto.getVerificationId());
+
+        log.info("Signup successful for user: {}", requestDto.getLoginId());
     }
 
     /**
@@ -164,16 +178,19 @@ public class AuthService {
      * 2. RDB의 Refresh Token과 대조 후 삭제
      * 3. Access Token을 남은 유효기간만큼 블랙리스트에 추가
      *
-     * @param accessToken Access Token
+     * @param accessToken  Access Token
      * @param refreshToken 로그아웃 요청 DTO (RefreshToken 포함)
      */
     @Transactional
     public void logout(String accessToken, String refreshToken) {
+        log.info("Starting logout process");
+
         // 1. Access Token에서 UserId 추출 (만료 여부와 상관없이)
         Long userId = jwtUtil.extractUserId(accessToken, false);
 
         // 2. Refresh Token이 유효한지 확인 (null 또는 빈 값인 경우)
         if (refreshToken == null || refreshToken.isBlank()) {
+            log.warn("Logout failed: Invalid refresh token (null or blank)");
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
@@ -184,6 +201,7 @@ public class AuthService {
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
 
         if (!storedRefreshToken.getTokenValue().equals(refreshToken)) {
+            log.warn("Logout failed: Refresh token mismatch for user: {}", userId);
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
@@ -197,6 +215,8 @@ public class AuthService {
         if (remainingValidity > 0) {
             redisTemplate.opsForValue().set(accessToken, "logout", Duration.ofMillis(remainingValidity));
         }
+
+        log.info("Logout successful for user: {}", userId);
     }
 
     /**
@@ -207,9 +227,17 @@ public class AuthService {
      */
     @Transactional
     public TokenResponseDto login(LoginRequestDto requestDto) {
+        log.info("Starting login process for user: {}", requestDto.getLoginId());
+
+        // 0. 사용자 존재 여부 확인 (명시적 에러 반환을 위해)
+        if (userRepository.findByLoginId(requestDto.getLoginId()).isEmpty()) {
+            log.warn("Login failed: User not found for loginId: {}", requestDto.getLoginId());
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
         // 1. UsernamePasswordAuthenticationToken 생성
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(requestDto.getLoginId(), requestDto.getPassword());
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                requestDto.getLoginId(), requestDto.getPassword());
 
         // 2. AuthenticationManager를 통해 인증 시도
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
@@ -241,6 +269,8 @@ public class AuthService {
             refreshTokenRepository.save(newRefreshToken);
         }
 
+        log.info("Login successful for user: {}", requestDto.getLoginId());
+
         // 6. TokenResponseDto로 반환
         return TokenResponseDto.builder()
                 .grantType("Bearer") // Add grantType
@@ -251,11 +281,14 @@ public class AuthService {
 
     /**
      * Access Token을 재발급합니다.
+     * 
      * @param refreshToken 재발급 요청에 사용될 Refresh Token
      * @return 새로운 Access Token이 담긴 응답 DTO
      */
     @Transactional
     public TokenResponseDto reissue(String refreshToken) {
+        log.info("Starting token reissue process");
+
         // 1. Refresh Token 유효성 검증
         jwtUtil.validateRefreshToken(refreshToken);
 
@@ -269,10 +302,12 @@ public class AuthService {
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
 
         if (!storedRefreshToken.getTokenValue().equals(refreshToken)) {
+            log.warn("Token reissue failed: Refresh token mismatch for user: {}", userId);
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
         // 4. Refresh Token의 만료 여부 확인 (RDB에 저장된 expiryDate 사용)
         if (storedRefreshToken.getExpiryDate().isBefore(Instant.now())) {
+            log.warn("Token reissue failed: Refresh token expired for user: {}", userId);
             throw new CustomException(ErrorCode.TOKEN_EXPIRED);
         }
 
@@ -281,6 +316,8 @@ public class AuthService {
                 .map(grantedAuthority -> grantedAuthority.getAuthority())
                 .collect(Collectors.toList());
         String newAccessToken = jwtUtil.createAccessToken(userId, authorities);
+
+        log.info("Token reissue successful for user: {}", userId);
 
         // 6. 새로운 Access Token만 담아서 반환 (Refresh Token은 유지)
         return TokenResponseDto.builder()
@@ -299,7 +336,9 @@ public class AuthService {
     @Transactional(readOnly = true)
     public String checkLoginIdDuplicate(String loginId) {
         userRepository.findByLoginId(loginId)
-                .ifPresent(user -> { throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE); });
+                .ifPresent(user -> {
+                    throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
+                });
         return "사용 가능한 아이디입니다.";
     }
 
@@ -312,7 +351,9 @@ public class AuthService {
     @Transactional(readOnly = true)
     public String checkPhoneNumDuplicate(String phoneNum) {
         userRepository.findByPhoneNum(phoneNum)
-                .ifPresent(user -> { throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE); });
+                .ifPresent(user -> {
+                    throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+                });
         return "사용 가능한 전화번호입니다.";
     }
 
