@@ -27,7 +27,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class SmsCertificationService {
+public class
+
+SmsCertificationService {
 
     private final CoolSmsProperties coolSmsProperties;
     private final RedisUtil redisUtil; // Replaced RedisTemplate with RedisUtil
