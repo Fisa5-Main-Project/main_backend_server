@@ -148,11 +148,11 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // FE 주소 정해지면 추가 "https://knowwhohow.site", "http://localhost:3000",
-        var allowedOrigins = appProperties.getAllowedOrigins();
-        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
-            configuration.setAllowedOrigins(allowedOrigins);
-        }
-
+//        var allowedOrigins = appProperties.getAllowedOrigins();
+//        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+//            configuration.setAllowedOrigins(allowedOrigins);
+//        }
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true); // JWT 토큰 사용 시, 자격증명(쿠키 등) 불필요

@@ -74,6 +74,10 @@ public class UserInfo {
         this.annualIncome = annualIncome;
     }
 
+    public void updateMydataStatus(MyDataStatus status) {
+        this.mydataStatus = status;
+    }
+
     public enum MyDataStatus {
         CONNECTED, DISCONNECTED, NONE
     }

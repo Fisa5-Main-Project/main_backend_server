@@ -1,8 +1,8 @@
 package com.know_who_how.main_server.global.jwt;
 
-import com.know_who_how.main_server.global.util.RedisUtil; // New import
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.global.util.RedisUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -10,6 +10,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -18,45 +19,39 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
-    private final RedisUtil redisUtil; // Replaced RedisTemplate with RedisUtil
+    private final RedisUtil redisUtil;
 
-    // 헤더 이름
     public static final String AUTHORIZATION_HEADER = "Authorization";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
-        // 이미 OAuth2(OIDC)로 인증된 세션이면 JWT로 덮어쓰지 않는다.
-        Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
-        if (currentAuth instanceof OAuth2AuthenticationToken) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = resolveToken(request);
-
         try {
+            String token = resolveToken(request);
+
             if (token != null) {
-                // Redis 블랙리스트 확인: 이미 로그아웃된 토큰인지 검사
-                if (redisUtil.get(token) != null) { // Use redisUtil.get
+                // 블랙리스트(로그아웃) 토큰 확인
+                if (redisUtil.get(token) != null) {
                     throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT);
                 }
 
-                // 토큰 검증
+                // JWT 검증 및 인증 세팅
                 jwtUtil.validateAccessToken(token);
-
-                // 인증 정보 SecurityContext에 저장
                 Authentication authentication = jwtUtil.getAuthenticationFromAccessToken(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                // JWT 헤더 없고 OAuth2 세션이 있으면 그대로 통과 (마이데이터 OAuth2 유지)
+                Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+                if (currentAuth instanceof OAuth2AuthenticationToken) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
             }
         } catch (CustomException e) {
             request.setAttribute("exception", e.getErrorCode());
@@ -73,7 +68,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Request Header에서 토큰 정보 추출 ( "Bearer [token]" )
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
@@ -81,5 +75,4 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         return null;
     }
-
 }

@@ -2,7 +2,10 @@ package com.know_who_how.main_server.user.controller;
 
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.entity.User.User;
+import com.know_who_how.main_server.user.dto.AssetDto;
+import com.know_who_how.main_server.user.dto.PensionAssetDto;
 import com.know_who_how.main_server.user.dto.UserResponseDto;
+import com.know_who_how.main_server.user.dto.PensionAssetDto;
 import com.know_who_how.main_server.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,5 +29,19 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponseDto>> getMyInfo(@AuthenticationPrincipal User user) {
         UserResponseDto userInfo = userService.getUserInfo(user);
         return ResponseEntity.ok(ApiResponse.onSuccess(userInfo));
+    }
+
+    @GetMapping("/assets")
+    @Operation(summary = "보유 자산 목록 조회", description = "사용자의 계좌(자산) 목록을 반환합니다.")
+    public ResponseEntity<ApiResponse<java.util.List<AssetDto>>> getAssets(@AuthenticationPrincipal User user) {
+        var assets = userService.getUserAssets(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess(assets));
+    }
+
+    @GetMapping("/assets/pensions")
+    @Operation(summary = "보유 연금 자산 목록 조회", description = "사용자의 자산 중 연금(PENSION) 유형만 반환합니다.")
+    public ResponseEntity<ApiResponse<java.util.List<PensionAssetDto>>> getPensionAssets(@AuthenticationPrincipal User user) {
+        var pensions = userService.getUserPensionAssets(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess(pensions));
     }
 }

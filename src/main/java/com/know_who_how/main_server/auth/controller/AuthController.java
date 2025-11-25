@@ -185,6 +185,8 @@ public class AuthController {
     public ApiResponse<AccessTokenResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto, HttpServletResponse response) {
         TokenResponseDto tokenDto = authService.login(requestDto);
 
+        System.out.println("히히 login 실행");
+
         // Refresh Token을 HttpOnly 쿠키에 설정
         cookieUtil.setRefreshTokenCookie(response, tokenDto.getRefreshToken());
 
