@@ -52,7 +52,9 @@ public class UserInfo {
     private MyDataStatus mydataStatus;
 
     @Builder
-    public UserInfo(User user, Long goalAmount, LocalDate goalTargetDate, Long expectationMonthlyCost, Long fixedMonthlyCost, Boolean retirementStatus, Long annualIncome, Integer targetRetiredAge, Integer numDependents, MyDataStatus mydataStatus) {
+    public UserInfo(User user, Long goalAmount, LocalDate goalTargetDate, Long expectationMonthlyCost,
+            Long fixedMonthlyCost, Boolean retirementStatus, Long annualIncome, Integer targetRetiredAge,
+            Integer numDependents, MyDataStatus mydataStatus) {
         this.user = user;
         this.goalAmount = goalAmount;
         this.goalTargetDate = goalTargetDate;
@@ -65,13 +67,15 @@ public class UserInfo {
         this.mydataStatus = mydataStatus;
     }
 
-    public void updateInfo(Long goalAmount, LocalDate goalTargetDate, Long expectationMonthlyCost, Long fixedMonthlyCost, Boolean retirementStatus, Long annualIncome) {
+    public void updateInfo(Long goalAmount, LocalDate goalTargetDate, Long expectationMonthlyCost,
+            Long fixedMonthlyCost, Boolean retirementStatus, Long annualIncome, Integer numDependents) {
         this.goalAmount = goalAmount;
         this.goalTargetDate = goalTargetDate;
         this.expectationMonthlyCost = expectationMonthlyCost;
         this.fixedMonthlyCost = fixedMonthlyCost;
         this.retirementStatus = retirementStatus;
         this.annualIncome = annualIncome;
+        this.numDependents = numDependents;
     }
 
     public enum MyDataStatus {

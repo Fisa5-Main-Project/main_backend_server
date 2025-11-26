@@ -83,7 +83,8 @@ class AssetManagementServiceTest {
         given(userInfoRepository.findByUser(mockUser)).willReturn(Optional.of(mockUserInfo));
 
         // idleCashAssets를 충분히 높게 설정하여 '목돈 예치형'이 되도록
-        com.know_who_how.main_server.global.entity.Asset.Asset mockAsset = org.mockito.Mockito.mock(com.know_who_how.main_server.global.entity.Asset.Asset.class);
+        com.know_who_how.main_server.global.entity.Asset.Asset mockAsset = org.mockito.Mockito
+                .mock(com.know_who_how.main_server.global.entity.Asset.Asset.class);
         given(mockAsset.getType()).willReturn(com.know_who_how.main_server.global.entity.Asset.AssetType.CURRENT);
         given(mockAsset.getBalance()).willReturn(java.math.BigDecimal.valueOf(10000000L)); // 유휴자금 1000만
         given(assetsRepository.findByUser(mockUser)).willReturn(java.util.List.of(mockAsset)); // 부채 0
@@ -106,12 +107,12 @@ class AssetManagementServiceTest {
         assertThat(response.goalMetrics().totalAsset()).isEqualTo(10000000L);
     }
 
-
     @Test
     @DisplayName("[성공] 포트폴리오 정보 저장 시 기존 정보가 없으면 새로 생성")
     void savePortfolioInfo_should_createNewInfo_when_userInfoNotFound() {
         // given
-        PortfolioInfoRequest request = new PortfolioInfoRequest(1000L, LocalDate.now().plusYears(1), 100L, 50L, false, 5000L);
+        PortfolioInfoRequest request = new PortfolioInfoRequest(1000L, LocalDate.now().plusYears(1), 100L, 50L, false,
+                5000L, 0);
         given(userRepository.findById(any())).willReturn(Optional.of(mockUser));
         given(userInfoRepository.findByUser(any(User.class))).willReturn(Optional.empty());
 
@@ -126,7 +127,8 @@ class AssetManagementServiceTest {
     @DisplayName("[성공] 포트폴리오 정보 저장 시 기존 정보가 있으면 업데이트")
     void savePortfolioInfo_should_updateInfo_when_userInfoExists() {
         // given
-        PortfolioInfoRequest request = new PortfolioInfoRequest(2000L, LocalDate.now().plusYears(2), 200L, 100L, true, 6000L);
+        PortfolioInfoRequest request = new PortfolioInfoRequest(2000L, LocalDate.now().plusYears(2), 200L, 100L, true,
+                6000L, 2);
         given(userRepository.findById(any())).willReturn(Optional.of(mockUser));
         given(userInfoRepository.findByUser(any(User.class))).willReturn(Optional.of(mockUserInfo));
 
@@ -140,8 +142,8 @@ class AssetManagementServiceTest {
                 request.expectationMonthlyCost(),
                 request.fixedMonthlyCost(),
                 request.retirementStatus(),
-                request.annualIncome()
-        );
+                request.annualIncome(),
+                request.numDependents());
         then(userInfoRepository).should().save(mockUserInfo);
     }
 }
