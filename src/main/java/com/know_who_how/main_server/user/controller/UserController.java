@@ -2,6 +2,7 @@ package com.know_who_how.main_server.user.controller;
 
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.entity.User.User;
+import com.know_who_how.main_server.user.dto.UserAssetResponseDto;
 import com.know_who_how.main_server.user.dto.UserResponseDto;
 import com.know_who_how.main_server.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -26,5 +29,12 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponseDto>> getMyInfo(@AuthenticationPrincipal User user) {
         UserResponseDto userInfo = userService.getUserInfo(user);
         return ResponseEntity.ok(ApiResponse.onSuccess(userInfo));
+    }
+
+    @GetMapping("/assets")
+    @Operation(summary = "로그인한 사용자의 자산 목록 조회", description = "인증된 사용자의 모든 자산(예금, 대출 등) 목록을 조회합니다.")
+    public ResponseEntity<ApiResponse<List<UserAssetResponseDto>>> getMyAssets(@AuthenticationPrincipal User user) {
+        List<UserAssetResponseDto> userAssets = userService.getUserAssets(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess(userAssets));
     }
 }
