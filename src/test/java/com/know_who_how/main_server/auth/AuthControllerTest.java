@@ -17,8 +17,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,13 +39,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@SpringBootTest
+@AutoConfigureMockMvc
 class AuthControllerTest {
 
     @Autowired
-    private WebApplicationContext wac;
-
     private MockMvc mockMvc;
 
     @Autowired
@@ -56,18 +55,8 @@ class AuthControllerTest {
     @MockBean
     private SmsCertificationService smsCertificationService;
 
-    @MockBean
-    private JwtAuthFilter jwtAuthFilter;
-
-    @MockBean
+    @SpyBean
     private JwtProperties jwtProperties;
-
-    @BeforeEach
-    void setUp() {
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(wac)
-                .addFilter(new CharacterEncodingFilter("UTF-8", true))
-                .build();
-    }
 
     @Test
     @DisplayName("아이디 중복 확인 - 사용 가능")

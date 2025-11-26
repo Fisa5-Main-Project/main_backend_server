@@ -5,12 +5,39 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * @Valid 어노테이션을 사용한 DTO의 유효성 검증 실패 시 발생하는 예외를 처리합니다.
+     *
+     * @param e MethodArgumentNotValidException
+     * @return 400 Bad Request와 첫 번째 유효성 검증 실패 메시지
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        BindingResult bindingResult = e.getBindingResult();
+        FieldError fieldError = bindingResult.getFieldError();
+
+        // 유효성 검증 실패 메시지를 동적으로 생성
+        String errorMessage = (fieldError != null) ? fieldError.getDefaultMessage() : ErrorCode.INVALID_INPUT_VALUE.getMessage();
+        log.warn("MethodArgumentNotValidException: {}", errorMessage);
+
+        ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        return new ResponseEntity<>(
+            ApiResponse.onFailure(errorCode.getCode(), errorMessage),
+            errorCode.getStatus()
+        );
+    }
 
     /**
      * Spring Security의 BadCredentialsException (비밀번호 불일치)을 처리합니다.
@@ -24,6 +51,26 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.INVALID_PASSWORD;
         return new ResponseEntity<>(
                 ApiResponse.onFailure(errorCode.getCode(), errorCode.getMessage()),
+                errorCode.getStatus()
+        );
+    }
+
+    /**
+     * 필수 파라미터가 누락되었을 때 발생하는 예외를 처리합니다.
+     *
+     * @param e MissingServletRequestParameterException
+     * @return INVALID_PARAMETER 에러 응답
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleMissingParams(MissingServletRequestParameterException e) {
+        log.warn("MissingServletRequestParameterException: {}", e.getMessage());
+        ErrorCode errorCode = ErrorCode.INVALID_PARAMETER;
+
+        // 누락된 파라미터 명을 에러 메세지에 포함합니다.
+        String message = String.format("%s (%s)", errorCode.getMessage(), e.getParameterName());
+
+        return new ResponseEntity<>(
+                ApiResponse.onFailure(errorCode.getCode(), message),
                 errorCode.getStatus()
         );
     }
