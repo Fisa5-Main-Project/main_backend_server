@@ -61,7 +61,13 @@ public enum ErrorCode {
     EXTERNAL_API_FORBIDDEN(HttpStatus.FORBIDDEN, "EXTERNAL_002", "Open API 서비스 접근 권한이 없습니다.(신청/승인 상태 확인)"),
     EXTERNAL_API_NOT_FOUND(HttpStatus.NOT_FOUND, "EXTERNAL_003", "Open API 서비스가 존재하지 않습니다.(URL 확인 필요)"),
     EXTERNAL_API_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "EXTERNAL_004","Open API 일일 호출 허용량을 초과했습니다."),
-    EXTERNAL_API_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_005", "기관 API 서버로부터 응답을 받지 못했습니다.");
+    EXTERNAL_API_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_005", "기관 API 서버로부터 응답을 받지 못했습니다."),
+
+    // Mydata Exception
+    MYDATA_EXPIRED(HttpStatus.UNAUTHORIZED, "MYDATA_001", "마이데이터 연동 토큰이 만료되었습니다. 재연동이 필요합니다."),
+    MYDATA_NOT_LINKED(HttpStatus.BAD_REQUEST, "MYDATA_002", "마이데이터 연동 정보(토큰)가 없습니다."),
+    MYDATA_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MYDATA_003", "마이데이터 서버(RS) 처리 중 오류가 발생했습니다.");
+
 
     private final HttpStatus status;    // HTTP 상태
     private final String code;          // API 응답에 사용할 커스텀 에러 코드 (HTTP 상태 코드와 동일하게)

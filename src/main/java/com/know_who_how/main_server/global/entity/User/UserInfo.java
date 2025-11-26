@@ -77,4 +77,9 @@ public class UserInfo {
     public enum MyDataStatus {
         CONNECTED, DISCONNECTED, NONE
     }
+
+    // [추가] 마이데이터 상태 업데이트
+    public void updateMydataStatus(MyDataStatus status) {
+        this.mydataStatus = status;
+    }
 }
