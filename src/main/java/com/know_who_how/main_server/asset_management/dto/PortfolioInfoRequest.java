@@ -38,8 +38,12 @@ public record PortfolioInfoRequest(
         @Schema(description = "연소득. 0 이상의 값을 입력해야 합니다.", example = "60000000")
         @NotNull(message = "연소득은 필수입니다.")
         @Min(value = 0, message = "연소득은 0 이상이어야 합니다.")
-        Long annualIncome
-) {
+        Long annualIncome,
+
+        @Schema(description = "부양가족 수. 0부터 10명까지 입력 가능합니다.", example = "2")
+        @NotNull(message = "부양가족 수는 필수입니다.")
+        @Min(value = 0, message = "부양가족 수는 0 이상이어야 합니다.")
+        Integer numDependents) {
     public UserInfo toEntity(User user) {
         return UserInfo.builder()
                 .user(user)
@@ -50,7 +54,7 @@ public record PortfolioInfoRequest(
                 .retirementStatus(this.retirementStatus)
                 .annualIncome(this.annualIncome)
                 .targetRetiredAge(0) // 기본값
-                .numDependents(0)    // 기본값
+                .numDependents(this.numDependents)
                 .mydataStatus(UserInfo.MyDataStatus.NONE) // 기본값
                 .build();
     }
