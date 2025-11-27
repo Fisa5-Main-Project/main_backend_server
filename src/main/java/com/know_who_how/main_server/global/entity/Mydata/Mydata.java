@@ -21,34 +21,23 @@ public class Mydata {
     // users.user_id as PK (1:1 mapping)
     @Id
     @Column(name = "user_id", nullable = false)
-    private Long id;
+    private Long userId;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade =  CascadeType.ALL)
     @MapsId
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "user_access_token")
-    private String accessToken;
-
     @Column(name = "user_refresh_token")
     private String refreshToken;
-
-    // 토큰 만료(초) 및 Scope
-    @Column(name = "user_expires_in")
-    private Integer expiresIn;
 
     @Column(name = "user_scope")
     private String scope;
 
-    public void updateTokens(String accessToken, String refreshToken) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-    }
-
-    // 토큰 메타정보(만료 시간, 스코프) 업데이트
-    public void updateTokenMeta(Integer expiresIn, String scope) {
-        this.expiresIn = expiresIn;
-        this.scope = scope;
+    // Refresh Token 갱신 메서드
+    public void updateRefreshToken(String refreshToken) {
+        if (refreshToken != null) {
+            this.refreshToken = refreshToken;
+        }
     }
 }

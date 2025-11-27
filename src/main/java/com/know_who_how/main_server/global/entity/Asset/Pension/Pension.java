@@ -19,7 +19,7 @@ public class Pension {
     @Column(name = "asset_id")
     private Long assetId; // PK and FK to Asset
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade =  CascadeType.ALL)
     @MapsId // Maps the primary key of the owning entity to the primary key of the associated entity
     @JoinColumn(name = "asset_id")
     private Asset asset;
