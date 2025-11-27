@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -63,6 +64,14 @@ public class User implements UserDetails {
 
     @Column(name = "user_mydata_registration", nullable = false)
     private boolean userMydataRegistration; // 마이데이터 연동 여부 (기본값: false)
+
+    // 상속 기록 여부
+    @Column(name = "user_inheritance_registration", nullable = false)
+    @ColumnDefault("false")
+    private boolean userInheritanceRegistration = false; // 기본값 명시적으로 false로 설정
+
+    @OneToMany(mappedBy="user", cascade = CascadeType.ALL)
+    private List<Inheritance> inheritances = new ArrayList<>();
 
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
@@ -141,4 +150,10 @@ public class User implements UserDetails {
         // 계정이 활성화되었는지
         return true;
     }
+    // === 상속 관련 메서드 ===
+    public void markInheritanceRegistered(){
+        this.userInheritanceRegistration = true;
+    }
+
+
 }

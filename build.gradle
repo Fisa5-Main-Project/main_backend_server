@@ -49,6 +49,12 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+
+//    // ------ S3 관련 의존성 ------
+//    implementation 'software.amazon.awssdk:s3'
+//    implementation 'software.amazon.awssdk:s3-presigner'
+//    implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
+
 }
 
 jacoco {
