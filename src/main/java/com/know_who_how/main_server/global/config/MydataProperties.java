@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix = "my-client-id")
+@ConfigurationProperties(prefix = "mydata")
 @Getter
 @Setter
 public class MydataProperties {
@@ -17,14 +17,11 @@ public class MydataProperties {
     private String clientId;
     private String clientSecret;
     private String redirectUri;
-    private int timeoutMs;
 
     @Getter @Setter
     public static class AsProperties {
-
         // AS 서버 엔드포인트
         private String authorizeUri;
-
         // mydata.as.token-uri
         private String tokenUri;
     }
@@ -32,6 +29,6 @@ public class MydataProperties {
     @Getter @Setter
     public static class RsProperties {
         // my-client-id.rs.my-data-api
-        private String myDataApi;
+        private String baseUrl;
     }
 }

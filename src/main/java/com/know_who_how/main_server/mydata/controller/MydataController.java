@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/resource")
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "7. 마이데이터", description = "마이데이터 자산/부채 조회 API")
@@ -54,7 +54,6 @@ public class MydataController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-
     @GetMapping("/my-data")
     public ResponseEntity<ApiResponse<MydataDto>> getMyData(@AuthenticationPrincipal User user) {
         if (user == null) {

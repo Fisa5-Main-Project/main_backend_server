@@ -10,6 +10,7 @@ import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.entity.User.UserInfo;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.global.util.RedisUtil;
 import com.know_who_how.main_server.mydata.dto.MydataDto;
 import com.know_who_how.main_server.mydata.dto.MydataResponse;
 import com.know_who_how.main_server.mydata.repository.MydataRepository;
@@ -18,6 +19,7 @@ import com.know_who_how.main_server.user.repository.PensionRepository;
 import com.know_who_how.main_server.user.repository.UserInfoRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MydataService {
@@ -44,6 +47,8 @@ public class MydataService {
     private final UserInfoRepository userInfoRepository;
     private final AssetsRepository assetsRepository;
     private final PensionRepository pensionRepository;
+
+    private final RedisUtil redisUtil;
 
     /**
      * AS(인증 서버) 호출용 WebClient
@@ -80,18 +85,19 @@ public class MydataService {
         }
 
         // 2) DB(MyData 테이블)에서 연동된 마이데이터 Access Token 조회
-        String accessToken = mydataRepository.findById(user.getUserId())
-                .map(Mydata::getAccessToken)
-                .orElse(null);
+        String key = "mydata:access:" + user.getUserId();
+        String accessToken = redisUtil.get(key).toString();
 
         // 로그인은 되어 있지만 MyData 연동이 안 되어 있거나 토큰이 비어 있는 경우
         if (accessToken == null || accessToken.isBlank()) {
-            // TODO: ErrorCode.MYDATA_NOT_LINKED ErrorCode에 추가해야함
+            log.info("Access Token이 만료되었습니다. Refresh Token으로 갱신을 시도하세요.");
             throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
+
+            // TODO: accessToken 만료시 Auth 서버에서 accessToken 재발급 로직 작성
         }
 
         // 3) RS(MyData API) 호출
-        String url = mydataProps.getRs().getMyDataApi();
+        String url = mydataProps.getRs().getBaseUrl();
         MydataResponse response;
 
         // TODO: Try-Catch 구조 수정

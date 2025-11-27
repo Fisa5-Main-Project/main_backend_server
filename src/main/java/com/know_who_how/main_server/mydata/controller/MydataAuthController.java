@@ -30,7 +30,7 @@ public class MydataAuthController {
     @GetMapping("/authorize")
     @Operation(summary = "마이데이터 연동 시작",
             description = "AS 인가 서버(/oauth2/authorize)로 리다이렉트합니다.")
-    public void authorize(@AuthenticationPrincipal User user,
+    public ResponseEntity<ApiResponse<?>> authorize(@AuthenticationPrincipal User user,
                           HttpServletResponse response) throws IOException {
         if (user == null) {
             throw new CustomException(ErrorCode.NOT_LOGIN_USER);
@@ -39,24 +39,27 @@ public class MydataAuthController {
         String authorizeUrl = mydataAuthService.buildAuthorizeUrl();
         log.info("마이데이터 연동 시작 - userId: {}, redirect: {}", user.getUserId(), authorizeUrl);
 
-        response.sendRedirect(authorizeUrl);
+        return ResponseEntity.ok(ApiResponse.onSuccess(authorizeUrl));
     }
 
     @GetMapping("/callback")
     @Operation(summary = "마이데이터 인가코드 callback",
             description = "AS에서 전달한 authorization code로 토큰을 발급받아 저장합니다.")
-    public ResponseEntity<ApiResponse<Void>> callback(@RequestParam("code") String code,
-                                                      @RequestParam(value = "state", required = false) String state,
-                                                      @AuthenticationPrincipal User user) {
+    public void callback(@RequestParam("code") String code,
+                         @RequestParam(value = "state", required = false) String state,
+                         @AuthenticationPrincipal User user,
+                         HttpServletResponse response) throws IOException{
         if (user == null) {
+            // 로그인 안 된 유저가 콜백으로 들어오면 예외
+            // TODO: 오류 페이지로 리다이렉트 할건지 생각
             throw new CustomException(ErrorCode.NOT_LOGIN_USER);
         }
 
         log.info("마이데이터 콜백 수신 - userId: {}, code: {}", user.getUserId(), code);
         mydataAuthService.handleCallback(user, code, state);
 
-        // 프론트는 이 응답을 받아서 /mydata/loading 으로 라우팅해도 되고,
-        // 여기서 바로 redirect를 해도 된다. (지금은 JSON 응답 형태)
-        return ResponseEntity.ok(ApiResponse.onSuccess(null));
+        // 프론트엔드 페이지로 리다이렉트
+        String frontendUrl = "http://localhost:3000/mydata/result?status=success";
+        response.sendRedirect(frontendUrl);
     }
 }

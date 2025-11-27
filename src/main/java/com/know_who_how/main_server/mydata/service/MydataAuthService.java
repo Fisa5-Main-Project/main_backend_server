@@ -5,6 +5,7 @@ import com.know_who_how.main_server.global.entity.Mydata.Mydata;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.global.util.RedisUtil;
 import com.know_who_how.main_server.mydata.repository.MydataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,6 +33,8 @@ public class MydataAuthService {
     private final MydataProperties mydataProperties;
     private final MydataRepository mydataRepository;
     private final WebClient mydataAuthWebClient; // @Qualifier 생략: 해당 타입 빈이 하나뿐이면 자동 주입
+
+    private final RedisUtil redisUtil;
 
     /**
      * 1) 연동 시작 시, AS의 authorize URL을 만들어 반환한다.
@@ -53,9 +57,9 @@ public class MydataAuthService {
         String url = authorizeUri
                 + "?response_type=code"
                 + "&client_id=" + mydataProperties.getClientId()
-                + "&redirect_uri=" + mydataProperties.getRedirectUri()
                 + "&scope=" + scope.replace(" ", "%20") // 공백문자 방지용 URL 인코딩
-                + "&state=" + state;
+                + "&state=" + state
+                + "&redirect_uri=" + mydataProperties.getRedirectUri();
 
         log.debug("MyData authorize URL 생성: {}", url);
         return url;
@@ -73,7 +77,10 @@ public class MydataAuthService {
 
         // TODO: state 검증 로직(보안용) 필요시 추가 가능
 
+        // Code로 토큰 교환
         Map<String, Object> tokenResponse = exchangeCodeForToken(code);
+
+        // Token 저장
         saveTokens(user, tokenResponse);
     }
 
@@ -90,13 +97,16 @@ public class MydataAuthService {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "authorization_code");
         formData.add("code", code);
-        formData.add("client_id", mydataProperties.getClientId());
-        formData.add("client_secret", mydataProperties.getClientSecret());
         formData.add("redirect_uri", mydataProperties.getRedirectUri());
 
         try {
             return mydataAuthWebClient.post()
                     .uri(tokenUri)
+                    // Basic Auth 헤더 추가
+                    .headers(headers -> headers.setBasicAuth(
+                            mydataProperties.getClientId(),
+                            mydataProperties.getClientSecret()
+                    ))
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .accept(MediaType.APPLICATION_JSON)
                     .acceptCharset(StandardCharsets.UTF_8)
@@ -124,28 +134,51 @@ public class MydataAuthService {
 
         String accessToken = (String) tokenResponse.get("access_token");
         String refreshToken = (String) tokenResponse.get("refresh_token");
-        Integer expiresIn = null;
-        if (tokenResponse.get("expires_in") instanceof Number num) {
-            expiresIn = num.intValue();
-        }
-        String scope = (String) tokenResponse.get("scope");
 
+        // accessToken 검증
         if (accessToken == null || accessToken.isBlank()) {
             log.error("MyData 토큰 응답에 access_token이 없습니다. 응답: {}", tokenResponse);
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
 
-        Optional<Mydata> mydataOpt = mydataRepository.findByUser(user);
-        Mydata mydata = mydataOpt.orElseGet(() ->
-                Mydata.builder()
-                        .user(user)
-                        .build()
-        );
+        // expire 검증
+        Integer expiresIn = null;
+        if (tokenResponse.get("expires_in") instanceof Number num) {
+            expiresIn = num.intValue();
+        }
 
-        mydata.updateTokens(accessToken, refreshToken);
-        mydata.updateTokenMeta(expiresIn, scope);
+        // redis 키 생성
+        String redisKey = "mydata:access:" + user.getUserId();
+        // 만료 시간이 없으면 기본 1시간(3600초) 설정
+        long ttlSeconds = (expiresIn != null) ? expiresIn : 3600;
 
-        mydataRepository.save(mydata);
-        log.info("MyData 토큰 저장 완료 - userId: {}", user.getUserId());
+        // accessToken redis에 저장
+        redisUtil.save(redisKey, accessToken, Duration.ofSeconds(ttlSeconds));
+        log.info("Redis 저장 완료: Key={}, TTL={}초", redisKey, ttlSeconds);
+
+        // scope 검증
+        String scope = (String) tokenResponse.get("scope");
+        if(scope == null || scope.isBlank()) {
+            log.error("MyData 토큰 응답에 scope 값이 없습니다. 응답: {}", tokenResponse);
+            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
+        }
+
+        mydataRepository.findById(user.getUserId())
+                .ifPresentOrElse(
+                        // 이미 연동된 유저라면 -> Refresh Token만 업데이트 (Dirty Checking)
+                        existingData -> {
+                            existingData.updateRefreshToken(refreshToken);
+                            log.info("RDB 업데이트 완료: UserID={}", user.getUserId());
+                        },
+                        // 첫 연동이라면 -> insert
+                        () -> {
+                            mydataRepository.save(Mydata.builder()
+                                    .user(user)
+                                    .refreshToken(refreshToken)
+                                    .scope(scope)
+                                    .build());
+                            log.info("RDB 신규 저장 완료: UserID={}", user.getUserId());
+                        }
+                );
     }
 }
