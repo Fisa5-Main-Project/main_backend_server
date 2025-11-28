@@ -4,6 +4,7 @@ import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.dto.ErrorResponse;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.user.dto.ProfileUpdateRequestDto; // DTO 임포트 추가
+import com.know_who_how.main_server.user.dto.UserKeywordDto;
 import com.know_who_how.main_server.user.dto.UserResponseDto;
 import com.know_who_how.main_server.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.PatchMapping; // PatchMapping 임
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -48,5 +51,16 @@ public class UserController {
             @Valid @RequestBody ProfileUpdateRequestDto requestDto) {
         userService.updateProfile(user, requestDto);
         return ResponseEntity.ok(ApiResponse.onSuccess("프로필 정보가 성공적으로 업데이트되었습니다."));
+    }
+
+    @GetMapping("/keywords")
+    @Operation(summary = "로그인한 사용자의 희망 키워드 조회", description = "인증된 사용자가 선택한 희망 키워드 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "키워드 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<ApiResponse<List<UserKeywordDto>>> getUserKeywords(@AuthenticationPrincipal User user) {
+        List<UserKeywordDto> userKeywords = userService.getUserKeywords(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess(userKeywords));
     }
 }

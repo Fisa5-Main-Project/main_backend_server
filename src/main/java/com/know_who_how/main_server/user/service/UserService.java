@@ -1,9 +1,13 @@
 package com.know_who_how.main_server.user.service;
 
 import com.know_who_how.main_server.global.entity.User.User;
-import com.know_who_how.main_server.user.dto.ProfileUpdateRequestDto; // DTO 임포트 추가
+import com.know_who_how.main_server.user.dto.ProfileUpdateRequestDto;
+import com.know_who_how.main_server.user.dto.UserKeywordDto; // UserKeywordDto 임포트 추가
 import com.know_who_how.main_server.user.dto.UserResponseDto;
-import com.know_who_how.main_server.user.repository.UserRepository; // UserRepository 임포트 추가
+import com.know_who_how.main_server.user.repository.UserKeywordRepository; // UserKeywordRepository 임포트 추가
+import com.know_who_how.main_server.user.repository.UserRepository;
+import java.util.List; // List 임포트 추가
+import java.util.stream.Collectors; // Collectors 임포트 추가
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class UserService {
 
-    private final UserRepository userRepository; // UserRepository 주입
+    private final UserRepository userRepository;
+    private final UserKeywordRepository userKeywordRepository; // UserKeywordRepository 주입
 
     public UserResponseDto getUserInfo(User user) {
         return UserResponseDto.from(user);
@@ -27,5 +32,11 @@ public class UserService {
 
         foundUser.updatePhoneNum(requestDto.getPhoneNum());
         // save를 명시적으로 호출하지 않아도 @Transactional에 의해 더티체킹으로 자동 업데이트됨
+    }
+
+    public List<UserKeywordDto> getUserKeywords(User user) {
+        return userKeywordRepository.findByUser(user).stream()
+                .map(userKeyword -> UserKeywordDto.from(userKeyword.getKeyword()))
+                .collect(Collectors.toList());
     }
 }
