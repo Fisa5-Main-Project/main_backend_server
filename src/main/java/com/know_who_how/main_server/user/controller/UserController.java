@@ -3,10 +3,7 @@ package com.know_who_how.main_server.user.controller;
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.dto.ErrorResponse;
 import com.know_who_how.main_server.global.entity.User.User;
-import com.know_who_how.main_server.user.dto.InvestmentTendencyUpdateRequestDto;
-import com.know_who_how.main_server.user.dto.ProfileUpdateRequestDto; // DTO 임포트 추가
-import com.know_who_how.main_server.user.dto.UserKeywordDto;
-import com.know_who_how.main_server.user.dto.UserResponseDto;
+import com.know_who_how.main_server.user.dto.*;
 import com.know_who_how.main_server.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,11 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping; // PatchMapping 임포트 추가
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -66,7 +59,7 @@ public class UserController {
     }
 
     @PatchMapping("/investment-tendency")
-    @Operation(summary = "사용자 투자 성향 수정", description = "로그인한 사용자의 투자 성향을 수정합니다.")
+    @Operation(summary = "사용자 자금 운용 성향 수정", description = "로그인한 사용자의 자금 운용 성향을 수정합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "투자 성향 수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 유효성 검사 실패)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
@@ -76,6 +69,20 @@ public class UserController {
             @AuthenticationPrincipal User user,
             @Valid @RequestBody InvestmentTendencyUpdateRequestDto requestDto) {
         userService.updateInvestmentTendancy(user, requestDto);
-        return ResponseEntity.ok(ApiResponse.onSuccess("투자 성향이 성공적으로 업데이트되었습니다."));
+        return ResponseEntity.ok(ApiResponse.onSuccess("자금 운용 성향이 성공적으로 업데이트되었습니다."));
+    }
+
+    @PutMapping("/keywords")
+    @Operation(summary = "사용자 희망 키워드 수정", description = "로그인한 사용자의 희망 키워드 목록을 수정합니다. 기존 키워드는 삭제되고 새로운 키워드로 대체됩니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "희망 키워드 수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 유효성 검사 실패)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<ApiResponse<String>> updateUserKeywords(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UserKeywordsUpdateRequestDto requestDto) {
+        userService.updateUserKeywords(user, requestDto);
+        return ResponseEntity.ok(ApiResponse.onSuccess("희망 키워드 목록이 성공적으로 업데이트되었습니다."));
     }
 }
