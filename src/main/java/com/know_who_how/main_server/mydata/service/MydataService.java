@@ -86,18 +86,21 @@ public class MydataService {
 
         // 2) DB(MyData 테이블)에서 연동된 마이데이터 Access Token 조회
         String key = "mydata:access:" + user.getUserId();
-        String accessToken = redisUtil.get(key).toString();
+        Object tokenObj = redisUtil.get(key);
+        if (tokenObj == null) {
+            throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
+        }
+        String accessToken = tokenObj.toString();
 
-        // 로그인은 되어 있지만 MyData 연동이 안 되어 있거나 토큰이 비어 있는 경우
-        if (accessToken == null || accessToken.isBlank()) {
+        if (accessToken.isBlank()) {
             log.info("Access Token이 만료되었습니다. Refresh Token으로 갱신을 시도하세요.");
             throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
-
-            // TODO: accessToken 만료시 Auth 서버에서 accessToken 재발급 로직 작성
         }
 
+
         // 3) RS(MyData API) 호출
-        String url = mydataProps.getRs().getBaseUrl();
+        String url = mydataProps.getRs().getBaseUrl() + "/api/v1/my-data";
+        log.info("Calling Mydata Rs: {}", url);
         MydataResponse response;
 
         // TODO: Try-Catch 구조 수정
@@ -111,11 +114,13 @@ public class MydataService {
                     .block();
         } catch (WebClientResponseException e) {
             // 토큰 만료 등으로 인한 401 → MyData 연동 만료 상태로 간주
+            log.error("MyData RS response error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
                 // TODO: ErrorCode.MYDATA_EXPIRED 도 enum에 추가해야함
                 throw new CustomException(ErrorCode.MYDATA_EXPIRED);
             }
             // 그 외 RS 오류는 공통 에러 코드로 래핑
+            log.error("MyData RS request error: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
 

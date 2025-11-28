@@ -59,7 +59,7 @@ public class MydataAuthController {
         mydataAuthService.handleCallback(user.getUserId(), code, state);
 
         // 프론트엔드 페이지로 리다이렉트
-        String frontendUrl = "http://localhost:3000/mydata/result?status=success";
-        response.sendRedirect(frontendUrl);
+//        String frontendUrl = "http://localhost:3000/mydata/result?status=success";
+//        response.sendRedirect(frontendUrl);
     }
 }
