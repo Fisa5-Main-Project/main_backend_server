@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -84,5 +86,17 @@ public class UserController {
             @Valid @RequestBody UserKeywordsUpdateRequestDto requestDto) {
         userService.updateUserKeywords(user, requestDto);
         return ResponseEntity.ok(ApiResponse.onSuccess("희망 키워드 목록이 성공적으로 업데이트되었습니다."));
+    }
+
+    @DeleteMapping
+    @Operation(summary = "회원 탈퇴", description = "로그인한 사용자의 계정을 삭제합니다. 연관된 모든 정보가 삭제됩니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "회원 탈퇴 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<ApiResponse<String>> withdrawUser(@AuthenticationPrincipal User user) {
+        userService.withdrawUser(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess("회원 탈퇴가 성공적으로 처리되었습니다."));
     }
 }
