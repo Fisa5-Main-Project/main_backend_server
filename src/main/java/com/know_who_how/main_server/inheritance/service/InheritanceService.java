@@ -1,0 +1,218 @@
+package com.know_who_how.main_server.inheritance.service;
+
+import com.amazonaws.services.s3.model.PartETag;
+import com.know_who_how.main_server.global.entity.Inheritance.Inheritance;
+import com.know_who_how.main_server.global.entity.Inheritance.InheritanceRecipient;
+import com.know_who_how.main_server.global.entity.Inheritance.InheritanceVideo;
+import com.know_who_how.main_server.global.entity.User.User;
+import com.know_who_how.main_server.global.exception.CustomException;
+import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.inheritance.dto.*;
+import com.know_who_how.main_server.inheritance.repository.InheritanceRecipientRepository;
+import com.know_who_how.main_server.inheritance.repository.InheritanceRepository;
+import com.know_who_how.main_server.inheritance.repository.InheritanceVideoRepository;
+import com.know_who_how.main_server.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class InheritanceService {
+
+    private final UserRepository userRepository;
+    private final InheritanceRepository inheritanceRepository;
+    private final InheritanceVideoRepository videoRepository;
+    private final InheritanceRecipientRepository recipientRepository;
+    private final S3Service s3Service;
+
+    // --- 상속 조회 및 계획 관리 (기존 로직 유지) ---
+
+    @Transactional(readOnly = true)
+    public InheritanceStatusResponse getInheritanceRegistrationStatus(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        return new InheritanceStatusResponse(user.isUserInheritanceRegistration());
+    }
+
+    @Transactional
+    public Long saveOrUpdateInheritancePlan(Long userId, BigDecimal asset, String ratio){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Inheritance inheritance = inheritanceRepository.findByUserId(userId)
+                .orElseGet(() -> Inheritance.builder()
+                        .user(user)
+                        .asset(asset)
+                        .ratio(ratio)
+                        .build());
+
+        if(inheritance.getInheritanceId() != null){
+            inheritance.updatePlan(asset, ratio);
+        }
+
+        Inheritance savedInheritance = inheritanceRepository.save(inheritance);
+
+        // 상속 계획 등록 완료 후 User 상태 업데이트
+        if (!user.isUserInheritanceRegistration()) {
+            user.markInheritanceRegistered();
+        }
+
+        return savedInheritance.getInheritanceId();
+    }
+
+    /**
+     * [1] Multipart Upload 시작 및 S3 Upload ID 반환
+     */
+    @Transactional
+    public VideoUploadInitResponse initiateVideoUpload(Long userId, Long inheritanceId){
+
+        Inheritance inheritance = inheritanceRepository.findById(inheritanceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INHERITANCE_NOT_FOUND));
+
+        if(!inheritance.getUser().getUserId().equals(userId)){
+            throw new CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
+        }
+
+        // 이미 영상이 존재하면 에러
+        if(inheritance.getVideo() !=null){
+            throw new CustomException(ErrorCode.VIDEO_ALREADY_EXISTS);
+        }
+
+        // S3 객체 키 생성
+        String videoKey = String.format("inheritance/user_%d/video_%s.mp4",
+                userId, UUID.randomUUID().toString());
+
+        // InheritanceVideo 엔티티 생성 (업로드 시작 기록)
+        InheritanceVideo video = InheritanceVideo.builder()
+                .inheritance(inheritance)
+                .s3ObjectKey(videoKey)
+                .build();
+        videoRepository.save(video);
+
+        // S3 Multipart Upload 시작 및 Upload ID 획득
+        String uploadId = s3Service.initiateMultipartUpload(videoKey);
+
+        return new VideoUploadInitResponse(
+                inheritanceId,
+                video.getVideoId(),
+                uploadId,
+                videoKey
+        );
+    }
+
+    /**
+     * [2] 조각(Part) 업로드용 Presigned URL 발급
+     */
+    @Transactional(readOnly = true)
+    public VideoPartUrlResponse generatePartUploadUrl(Long userId, Long inheritanceId, String uploadId, int partNumber){
+        // 상속 계획 소유주 및 영상 존재 여부 검증 (생략: initiate 단계에서 이미 검증되었고, 여기선 간단히 S3Service로 위임)
+
+        // S3 객체 키를 찾기 위해 Inheritance 객체 조회
+        Inheritance inheritance = inheritanceRepository.findById(inheritanceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INHERITANCE_NOT_FOUND));
+
+        if(!inheritance.getUser().getUserId().equals(userId)){
+            throw new CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
+        }
+
+        // S3Service를 통해 Part Upload용 Presigned URL 발급
+        String s3ObjectKey = inheritance.getVideo().getS3ObjectKey();
+        String partUploadUrl = s3Service.generatePartPresignedUrl(s3ObjectKey, uploadId, partNumber);
+
+        return new VideoPartUrlResponse(
+                partNumber,
+                partUploadUrl
+        );
+    }
+
+    /**
+     * [3] Multipart Upload 완료
+     */
+    @Transactional
+    public void completeVideoUpload(Long userId, Long inheritanceId, VideoUploadCompleteRequest request){
+
+        Inheritance inheritance = inheritanceRepository.findById(inheritanceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INHERITANCE_NOT_FOUND));
+
+        if(!inheritance.getUser().getUserId().equals(userId)){
+            throw new CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
+        }
+
+        // PartETag 리스트 생성
+        List<PartETag> partETags = request.partETags().stream()
+                .map(dto -> new PartETag(dto.partNumber(), dto.eTag()))
+                .collect(Collectors.toList());
+
+        // S3에 완료 요청
+        String s3ObjectKey = inheritance.getVideo().getS3ObjectKey();
+        s3Service.completeMultipartUpload(s3ObjectKey, request.uploadId(), partETags);
+
+        // TODO: 업로드 완료 후 InheritanceVideo 엔티티에 최종 파일 크기/상태 등 추가 정보 업데이트 필요 시 로직 추가
+    }
+
+
+    // 상속 영상편지 삭제
+    @Transactional
+    public void deleteVideo(Long userId, Long inheritanceId){
+        Inheritance inheritance = inheritanceRepository.findById(inheritanceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INHERITANCE_NOT_FOUND));
+
+        if(!inheritance.getUser().getUserId().equals(userId)){
+            throw new CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
+        }
+
+        InheritanceVideo video = inheritance.getVideo();
+        if(video == null){
+            throw new CustomException(ErrorCode.VIDEO_NOT_FOUND);
+        }
+
+        s3Service.deleteObject(video.getS3ObjectKey());
+        videoRepository.delete(video);
+        inheritance.setVideo(null);
+    }
+
+    // 영상편지 수신자 등록
+    @Transactional
+    public void registerRecipients(Long videoId, List<RecipientRegistrationRequest> recipients){
+        InheritanceVideo video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VIDEO_NOT_FOUND));
+
+        for(RecipientRegistrationRequest req: recipients){
+            String accessLinkToken = UUID.randomUUID().toString();
+
+            InheritanceRecipient recipient = InheritanceRecipient.builder()
+                    .video(video)
+                    .email(req.email())
+                    .accessLink(accessLinkToken)
+                    .scheduledSendDate(req.scheduledSendDate())
+                    .build();
+
+            video.addRecipient(recipient);
+            recipientRepository.save(recipient);
+        }
+    }
+
+    // 비회원 접근 토큰 검증 및 S3 다운로드 URL 생성
+    @Transactional(readOnly = true)
+    public String getPresignedUrlAndValidateToken(String token){
+        InheritanceRecipient recipient = recipientRepository.findByAccessLink(token)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
+
+        InheritanceVideo video = recipient.getVideo();
+        if(video == null){
+            throw new CustomException(ErrorCode.VIDEO_NOT_FOUND);
+        }
+
+        return s3Service.generateDownloadPresignedUrl(video.getS3ObjectKey());
+    }
+    
+    // TODO: 수신자에게 이메일 보내는 로직 추가 필요
+}

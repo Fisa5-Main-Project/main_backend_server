@@ -2,7 +2,8 @@ package com.know_who_how.main_server.inheritance.repository;
 
 import com.know_who_how.main_server.global.entity.Inheritance.InheritanceVideo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
 
-public interface InheritanceVideoRepository extends JpaRepository<InheritanceVideo, Integer> {
+public interface InheritanceVideoRepository extends JpaRepository<InheritanceVideo, Long> {
 
 }
