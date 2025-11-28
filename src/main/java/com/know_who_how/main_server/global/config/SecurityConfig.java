@@ -52,7 +52,8 @@ public class SecurityConfig {
             "/v3/api-docs/**",                      // OpenAPI 3.0 Docs
             "/v1/api-docs/**",                      // Swagger API Docs (application.yml 설정)
             "/webjars/**",                          // Swagger UI Webjars
-            "/error"
+            "/error",
+            "/inheritance/view-redirect/**"
     };
 
     @Bean
