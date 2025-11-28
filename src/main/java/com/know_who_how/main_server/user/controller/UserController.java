@@ -3,6 +3,7 @@ package com.know_who_how.main_server.user.controller;
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.dto.ErrorResponse;
 import com.know_who_how.main_server.global.entity.User.User;
+import com.know_who_how.main_server.user.dto.InvestmentTendencyUpdateRequestDto;
 import com.know_who_how.main_server.user.dto.ProfileUpdateRequestDto; // DTO 임포트 추가
 import com.know_who_how.main_server.user.dto.UserKeywordDto;
 import com.know_who_how.main_server.user.dto.UserResponseDto;
@@ -62,5 +63,19 @@ public class UserController {
     public ResponseEntity<ApiResponse<List<UserKeywordDto>>> getUserKeywords(@AuthenticationPrincipal User user) {
         List<UserKeywordDto> userKeywords = userService.getUserKeywords(user);
         return ResponseEntity.ok(ApiResponse.onSuccess(userKeywords));
+    }
+
+    @PatchMapping("/investment-tendency")
+    @Operation(summary = "사용자 투자 성향 수정", description = "로그인한 사용자의 투자 성향을 수정합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "투자 성향 수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 유효성 검사 실패)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<ApiResponse<String>> updateInvestmentTendancy(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody InvestmentTendencyUpdateRequestDto requestDto) {
+        userService.updateInvestmentTendancy(user, requestDto);
+        return ResponseEntity.ok(ApiResponse.onSuccess("투자 성향이 성공적으로 업데이트되었습니다."));
     }
 }

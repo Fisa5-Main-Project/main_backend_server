@@ -99,6 +99,11 @@ public class User implements UserDetails {
         this.phoneNum = phoneNum;
     }
 
+    // 투자 성향 업데이트 메서드 추가
+    public void updateInvestmentTendancy(InvestmentTendancy investmentTendancy) {
+        this.investmentTendancy = investmentTendancy;
+    }
+
     // === UserDetails 인터페이스 구현 메서드 ===
 
     @Override
