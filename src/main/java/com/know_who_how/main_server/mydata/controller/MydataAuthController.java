@@ -56,7 +56,7 @@ public class MydataAuthController {
         }
 
         log.info("마이데이터 콜백 수신 - userId: {}, code: {}", user.getUserId(), code);
-        mydataAuthService.handleCallback(user, code, state);
+        mydataAuthService.handleCallback(user.getUserId(), code, state);
 
         // 프론트엔드 페이지로 리다이렉트
         String frontendUrl = "http://localhost:3000/mydata/result?status=success";

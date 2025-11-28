@@ -7,6 +7,7 @@ import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.global.util.RedisUtil;
 import com.know_who_how.main_server.mydata.repository.MydataRepository;
+import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -32,7 +33,8 @@ public class MydataAuthService {
 
     private final MydataProperties mydataProperties;
     private final MydataRepository mydataRepository;
-    private final WebClient mydataAuthWebClient; // @Qualifier 생략: 해당 타입 빈이 하나뿐이면 자동 주입
+    private final WebClient mydataAuthWebClient;
+    private final UserRepository userRepository;
 
     private final RedisUtil redisUtil;
 
@@ -70,8 +72,8 @@ public class MydataAuthService {
      *    Access/Refresh Token을 Mydata 테이블에 저장한다.
      */
     @Transactional
-    public void handleCallback(User user, String code, String state) {
-        if (user == null) {
+    public void handleCallback(Long userId, String code, String state) {
+        if (userId == null) {
             throw new CustomException(ErrorCode.NOT_LOGIN_USER);
         }
 
@@ -81,7 +83,7 @@ public class MydataAuthService {
         Map<String, Object> tokenResponse = exchangeCodeForToken(code);
 
         // Token 저장
-        saveTokens(user, tokenResponse);
+        saveTokens(userId, tokenResponse);
     }
 
     /**
@@ -98,6 +100,9 @@ public class MydataAuthService {
         formData.add("grant_type", "authorization_code");
         formData.add("code", code);
         formData.add("redirect_uri", mydataProperties.getRedirectUri());
+        log.info("Auth 서버로 보내는 Redirect URI: {}", mydataProperties.getRedirectUri());
+//        formData.add("client_id", mydataProperties.getClientId());
+//        formData.add("client_secret", mydataProperties.getClientSecret());
 
         try {
             return mydataAuthWebClient.post()
@@ -127,7 +132,7 @@ public class MydataAuthService {
     /**
      * 3) 토큰 응답을 파싱하여 Mydata 엔티티에 저장/갱신
      */
-    private void saveTokens(User user, Map<String, Object> tokenResponse) {
+    private void saveTokens(Long userId, Map<String, Object> tokenResponse) {
         if (tokenResponse == null) {
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
@@ -148,7 +153,7 @@ public class MydataAuthService {
         }
 
         // redis 키 생성
-        String redisKey = "mydata:access:" + user.getUserId();
+        String redisKey = "mydata:access:" + userId;
         // 만료 시간이 없으면 기본 1시간(3600초) 설정
         long ttlSeconds = (expiresIn != null) ? expiresIn : 3600;
 
@@ -163,21 +168,22 @@ public class MydataAuthService {
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
 
-        mydataRepository.findById(user.getUserId())
+        mydataRepository.findById(userId)
                 .ifPresentOrElse(
                         // 이미 연동된 유저라면 -> Refresh Token만 업데이트 (Dirty Checking)
                         existingData -> {
                             existingData.updateRefreshToken(refreshToken);
-                            log.info("RDB 업데이트 완료: UserID={}", user.getUserId());
+                            log.info("RDB 업데이트 완료: UserID={}", userId);
                         },
                         // 첫 연동이라면 -> insert
                         () -> {
+                            User userRef = userRepository.getReferenceById(userId);
                             mydataRepository.save(Mydata.builder()
-                                    .user(user)
+                                    .user(userRef)
                                     .refreshToken(refreshToken)
                                     .scope(scope)
                                     .build());
-                            log.info("RDB 신규 저장 완료: UserID={}", user.getUserId());
+                            log.info("RDB 신규 저장 완료: UserID={}", userId);
                         }
                 );
     }
