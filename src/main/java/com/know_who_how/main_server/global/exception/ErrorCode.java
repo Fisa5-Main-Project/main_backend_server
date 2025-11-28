@@ -66,7 +66,7 @@ public enum ErrorCode {
     // Mydata Exception
     MYDATA_EXPIRED(HttpStatus.UNAUTHORIZED, "MYDATA_001", "마이데이터 연동 토큰이 만료되었습니다. 재연동이 필요합니다."),
     MYDATA_NOT_LINKED(HttpStatus.BAD_REQUEST, "MYDATA_002", "마이데이터 연동 정보(토큰)가 없습니다."),
-    MYDATA_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MYDATA_003", "마이데이터 서버(RS) 처리 중 오류가 발생했습니다.");
+    MYDATA_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MYDATA_003", "마이데이터 토근 교환 오류가 발생했습니다.");
 
 
     private final HttpStatus status;    // HTTP 상태

@@ -93,7 +93,7 @@ public class MydataAuthService {
             log.error("MyData tokenUri 설정이 없습니다.");
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
-
+        log.info("token uri : {}, code : {}", tokenUri, code);
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "authorization_code");
         formData.add("code", code);
