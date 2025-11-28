@@ -94,6 +94,11 @@ public class User implements UserDetails {
         this.assetTotal = assetTotal;
     }
 
+    // 전화번호 업데이트 메서드 추가
+    public void updatePhoneNum(String phoneNum) {
+        this.phoneNum = phoneNum;
+    }
+
     // === UserDetails 인터페이스 구현 메서드 ===
 
     @Override
