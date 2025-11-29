@@ -5,5 +5,5 @@ public enum InvestmentTendancy {
     적극투자형,
     위험중립형,
     안정추구형,
-    원금보존형
+    원금보장형
 }
