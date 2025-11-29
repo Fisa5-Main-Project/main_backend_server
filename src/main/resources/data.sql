@@ -23,7 +23,7 @@ VALUES (
     }',
     NULL, -- No bonus rates
     'SIMPLE',
-    '원금보장형'
+    '원금보존형'
 );
 
 INSERT INTO financial_product (product_name, product_type, bank_name, min_amount, max_amount, min_period_months, max_period_months, base_interest_rate, interest_rate_details, bonus_rate_details, compounding_strategy, applicable_tendency)

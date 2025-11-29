@@ -10,5 +10,4 @@ import java.util.List;
 @Repository
 public interface AssetsRepository extends JpaRepository<Asset, Long> {
     List<Asset> findByUser(User user);
-    void deleteAllByUser(User user);
 }
