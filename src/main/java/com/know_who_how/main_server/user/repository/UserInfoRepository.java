@@ -10,5 +10,4 @@ import java.util.Optional;
 @Repository
 public interface UserInfoRepository extends JpaRepository<UserInfo, Long> {
     Optional<UserInfo> findByUser(User user);
-    void deleteByUser(User user);
 }

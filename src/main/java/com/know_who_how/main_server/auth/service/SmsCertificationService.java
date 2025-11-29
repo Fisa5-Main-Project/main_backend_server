@@ -2,7 +2,6 @@ package com.know_who_how.main_server.auth.service;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.know_who_how.main_server.auth.dto.MypageSmsSendRequestDto;
 import com.know_who_how.main_server.auth.dto.SmsCertificationConfirmDto;
 import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
 import com.know_who_how.main_server.auth.dto.TestSmsResponseDto;
@@ -141,70 +140,6 @@ public class SmsCertificationService {
 
     public void removeUserVerificationData(String verificationId) {
         redisUtil.delete(verificationId); // Use redisUtil.delete
-    }
-
-    /**
-     * 마이페이지 프로필 수정 본인 확인을 위한 SMS 인증 번호를 전송하고, 인증 정보를 Redis에 저장합니다.
-     * 전화번호 중복 확인 로직은 포함하지 않습니다.
-     *
-     * @param requestDto SMS 인증 요청 DTO (이름, 전화번호)
-     * @return verificationId
-     */
-    public TestSmsResponseDto sendSmsCertificationForMypage(MypageSmsSendRequestDto requestDto) {
-        String verificationId = UUID.randomUUID().toString();
-        String certificationCode = createCertificationCode();
-        Message message = new Message();
-        message.setFrom(coolSmsProperties.getFromNumber());
-        message.setTo(requestDto.getPhoneNum());
-        message.setText("[KnowWhoHow] 본인확인 인증번호는 [" + certificationCode + "] 입니다.");
-
-        // TODO: 실제 SMS 발송 로직('this.messageService.send(message)') 활성화 시, 아래 catch 블록에 SolapiMessageNotReceivedException 처리 로직 추가 필요
-        try {
-            // 실제 운영 환경에서는 SMS 발송 로직을 활성화해야 합니다.
-            // this.messageService.send(message);
-
-            // MypageSmsSendRequestDto를 SmsCertificationRequestDto로 변환 (birth, gender는 null)
-            SmsCertificationRequestDto smsRequestForRedis = new SmsCertificationRequestDto(
-                    requestDto.getName(),
-                    null, // birth는 null
-                    null, // gender는 null
-                    requestDto.getPhoneNum()
-            );
-            SmsVerificationData data = new SmsVerificationData(certificationCode, smsRequestForRedis, false);
-            redisUtil.save(verificationId, data, EXPIRATION_TIME);
-
-            // verificationId와 authCode를 함께 반환
-            log.info("마이페이지 인증용 SMS 정보 생성 완료. verificationId: {}, authCode: {}", verificationId, certificationCode);
-            return new TestSmsResponseDto(verificationId, certificationCode);
-        } catch (Exception e) {
-            log.error("SMS 인증 처리 중 알 수 없는 오류 발생", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * 마이페이지 프로필 수정 SMS 인증 번호를 확인합니다.
-     *
-     * @param confirmDto SMS 인증 확인 DTO
-     * @return 인증 성공 메시지
-     */
-    public String confirmSmsCertificationForMypage(SmsCertificationConfirmDto confirmDto) {
-        String verificationId = confirmDto.getVerificationId();
-        SmsVerificationData data = (SmsVerificationData) redisUtil.get(verificationId);
-
-        if (data == null) {
-            throw new CustomException(ErrorCode.CERTIFICATION_CODE_NOT_FOUND);
-        }
-
-        if (!data.getCertificationCode().equals(confirmDto.getAuthCode())) {
-            throw new CustomException(ErrorCode.INVALID_CERTIFICATION_CODE);
-        }
-
-        // 인증 성공 시, Redis에 저장된 데이터의 isConfirmed 상태를 true로 업데이트
-        SmsVerificationData updatedData = new SmsVerificationData(data.getCertificationCode(), data.getUserData(), true);
-        redisUtil.save(verificationId, updatedData, EXPIRATION_TIME);
-
-        return "인증번호가 일치합니다.";
     }
 
     /**
