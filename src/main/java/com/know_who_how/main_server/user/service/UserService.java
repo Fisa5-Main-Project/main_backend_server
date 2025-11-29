@@ -9,7 +9,14 @@ import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.user.dto.*;
-import com.know_who_how.main_server.user.repository.*; // 와일드카드로 변경
+import com.know_who_how.main_server.user.repository.AssetsRepository;
+import com.know_who_how.main_server.user.repository.KeywordRepository;
+import com.know_who_how.main_server.user.repository.PensionRepository;
+import com.know_who_how.main_server.user.repository.RefreshTokenRepository;
+import com.know_who_how.main_server.user.repository.UserInfoRepository;
+import com.know_who_how.main_server.user.repository.UserKeywordRepository;
+import com.know_who_how.main_server.user.repository.UserRepository;
+import com.know_who_how.main_server.user.repository.UserTermRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,7 +52,7 @@ public class UserService {
     @Transactional
     public void updateProfile(User user, ProfileUpdateRequestDto requestDto) {
         User foundUser = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         foundUser.updatePhoneNum(requestDto.getPhoneNum());
     }

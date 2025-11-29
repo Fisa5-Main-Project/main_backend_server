@@ -158,6 +158,7 @@ public class SmsCertificationService {
         message.setTo(requestDto.getPhoneNum());
         message.setText("[KnowWhoHow] 본인확인 인증번호는 [" + certificationCode + "] 입니다.");
 
+        // TODO: 실제 SMS 발송 로직('this.messageService.send(message)') 활성화 시, 아래 catch 블록에 SolapiMessageNotReceivedException 처리 로직 추가 필요
         try {
             // 실제 운영 환경에서는 SMS 발송 로직을 활성화해야 합니다.
             // this.messageService.send(message);
