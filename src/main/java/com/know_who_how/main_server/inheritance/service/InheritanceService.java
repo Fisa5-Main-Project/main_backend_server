@@ -32,8 +32,14 @@ public class InheritanceService {
     private final InheritanceRecipientRepository recipientRepository;
     private final S3Service s3Service;
 
-    // --- 상속 조회 및 계획 관리 (기존 로직 유지) ---
+    // --- 상속 조회 및 계획 관리 ---
 
+
+    /**
+     * user가 상속 설계를 받은 적이 있는지 여부 반환
+     * @param userId 사용자 ID
+     * @return true/false
+     */
     @Transactional(readOnly = true)
     public InheritanceStatusResponse getInheritanceRegistrationStatus(Long userId){
         User user = userRepository.findById(userId)
@@ -47,7 +53,7 @@ public class InheritanceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        Inheritance inheritance = inheritanceRepository.findByUserId(userId)
+        Inheritance inheritance = inheritanceRepository.findByUser_UserId(userId)
                 .orElseGet(() -> Inheritance.builder()
                         .user(user)
                         .asset(asset)

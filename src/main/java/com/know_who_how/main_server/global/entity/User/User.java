@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.global.entity.User;
 
+import com.know_who_how.main_server.global.entity.Inheritance.Inheritance;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

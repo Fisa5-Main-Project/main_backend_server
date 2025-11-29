@@ -1,6 +1,7 @@
 package com.know_who_how.main_server.inheritance.controller;
 
 import com.know_who_how.main_server.global.dto.ApiResponse;
+import com.know_who_how.main_server.global.entity.User.User; // User 엔티티 import 추가
 import com.know_who_how.main_server.inheritance.dto.*;
 import com.know_who_how.main_server.inheritance.service.InheritanceService;
 import jakarta.validation.Valid;
@@ -18,7 +19,7 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class InheritanceController {
 
-    private  final InheritanceService inheritanceService;
+    private final InheritanceService inheritanceService;
 
     // --- 회원 전용 API ---
 
@@ -27,7 +28,10 @@ public class InheritanceController {
      */
     @GetMapping("/inheritance/status")
     public ResponseEntity<ApiResponse<InheritanceStatusResponse>> getInheritanceStatus(
-            @AuthenticationPrincipal Long userId){
+            @AuthenticationPrincipal User user){
+
+        Long userId = user.getUserId();
+
         InheritanceStatusResponse response = inheritanceService.getInheritanceRegistrationStatus(userId);
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
@@ -37,9 +41,10 @@ public class InheritanceController {
      */
     @PostMapping("/inheritance/plan")
     public ResponseEntity<ApiResponse<Long>> createOrUpdateInheritancePlan(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal User user,
             @RequestBody InheritancePlanRequest request){
 
+        Long userId = user.getUserId();
         BigDecimal asset = request.asset();
         String ratio = request.ratio();
 
@@ -53,8 +58,10 @@ public class InheritanceController {
      */
     @PostMapping("/inheritance/{inheritanceId}/video/upload/init")
     public ResponseEntity<ApiResponse<VideoUploadInitResponse>> initiateVideoUpload(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId){
+
+        Long userId = user.getUserId();
 
         VideoUploadInitResponse response = inheritanceService.initiateVideoUpload(userId, inheritanceId);
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
@@ -62,14 +69,15 @@ public class InheritanceController {
 
     /**
      * [2] Multipart Upload 조각(Part) 업로드용 Presigned URL 요청
-     * 클라이언트가 각 청크를 업로드하기 전에 호출합니다.
      */
     @GetMapping("/inheritance/{inheritanceId}/video/upload/part")
     public ResponseEntity<ApiResponse<VideoPartUrlResponse>> getPartUploadUrl(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId,
             @RequestParam("uploadId") String uploadId,
             @RequestParam("partNumber") int partNumber) {
+
+        Long userId = user.getUserId();
 
         VideoPartUrlResponse response = inheritanceService.generatePartUploadUrl(userId, inheritanceId, uploadId, partNumber);
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
@@ -77,13 +85,14 @@ public class InheritanceController {
 
     /**
      * [3] Multipart Upload 완료 (Completion)
-     * 클라이언트가 모든 조각 업로드를 마친 후, ETag 리스트와 함께 최종 완료를 요청
      */
     @PostMapping("/inheritance/{inheritanceId}/video/upload/complete")
     public ResponseEntity<ApiResponse<Void>> completeVideoUpload(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId,
             @Valid @RequestBody VideoUploadCompleteRequest request) {
+
+        Long userId = user.getUserId();
 
         inheritanceService.completeVideoUpload(userId, inheritanceId, request);
         return ResponseEntity.ok(ApiResponse.onSuccess());
@@ -94,8 +103,10 @@ public class InheritanceController {
      */
     @DeleteMapping("/inheritance/{inheritanceId}/video")
     public ResponseEntity<ApiResponse<Void>> deleteVideo(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId){
+
+        Long userId = user.getUserId();
 
         inheritanceService.deleteVideo(userId, inheritanceId);
 
@@ -128,5 +139,4 @@ public class InheritanceController {
 
         return new ResponseEntity<>(headers, HttpStatus.TEMPORARY_REDIRECT);
     }
-
 }

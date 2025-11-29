@@ -68,8 +68,6 @@ public enum ErrorCode {
     MYDATA_NOT_LINKED(HttpStatus.BAD_REQUEST, "MYDATA_002", "마이데이터 연동 정보(토큰)가 없습니다."),
     MYDATA_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MYDATA_003", "마이데이터 토근 교환 오류가 발생했습니다."),
 
-    EXTERNAL_API_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "EXTERNAL_005", "기관 API 서버로부터 응답을 받지 못했습니다."),
-
     // inheritance exception
     INHERITANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "INHERITANCE_001", "요청하신 상속 정보를 찾을 수 없습니다."),
     VIDEO_NOT_FOUND(HttpStatus.NOT_FOUND, "INHERITANCE_002", "해당 영상편지 정보를 찾을 수 없습니다."),

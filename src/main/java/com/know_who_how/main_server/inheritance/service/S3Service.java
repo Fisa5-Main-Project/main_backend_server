@@ -18,15 +18,15 @@ public class S3Service {
     // AwsS3Config에서 등록한 AmazonS3 클라이언트 주입받음.
     private final AmazonS3 amazonS3;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
 
     private static final long MULTIPART_UPLOAD_URL_EXPIRATION_MILLIS = Duration.ofMinutes(30).toMillis(); // Part URL 유효기간: 30분
     private static final long DOWNLOAD_URL_EXPIRATION_MILLIS = Duration.ofMinutes(5).toMillis();
 
     /**
-     * [1] Multipart Upload 시작 (Initialization)
-     * @param objectKey S3 저장 경로
+     * [1] 영상 업로드 전 S3에서 UploadId 받아오기
+     * @param objectKey S3 저장 경로 (서비스에서 videoKey를 넘김)
      * @return S3에서 발급한 Upload ID
      */
     public String initiateMultipartUpload(String objectKey){
@@ -37,10 +37,17 @@ public class S3Service {
 
     /**
      * [2] Part Upload용 Presigned URL 생성
-     * @param objectKey S3 저장 경로
+     * @param objectKey S3 저장 경로(videoId 기반)
      * @param uploadId initiate 단계에서 받은 Upload ID
      * @param partNumber 업로드할 조각 번호 (1부터 시작)
      * @return Part PUT 요청용 Presigned URL
+     * ex) return 값 예시
+     * https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}
+     * ?AWSAccessKeyId={Access Key ID}
+     * &Expires={Expiration Timestamp}
+     * &Signature={Generated Signature}
+     * &uploadId={Upload ID}
+     * &partNumber={Part Number}
      */
     public String generatePartPresignedUrl(String objectKey, String uploadId, int partNumber){
         Date expiration = new Date(System.currentTimeMillis() + MULTIPART_UPLOAD_URL_EXPIRATION_MILLIS);
@@ -59,7 +66,7 @@ public class S3Service {
 
     /**
      * [3] Multipart Upload 완료 (Completion)
-     * @param objectKey S3 저장 경로
+     * @param objectKey S3 저장 경로 (video 키 기반)
      * @param uploadId initiate 단계에서 받은 Upload ID
      * @param partETags 클라이언트로부터 받은 모든 Part ETag 리스트
      */
@@ -73,11 +80,7 @@ public class S3Service {
     // S3 다운로드를 위한 Presigned URL을 생성 (GET 권한)
     // 백엔드 검증 후 클라이언트를 S3로 리다이렉트
     public String generateDownloadPresignedUrl(String objectKey){
-        Date expiration = new Date();
-
-        // 유효기간 : 5분 (수신자가 링크를 클릭하고)
-        long expTimeMillis = expiration.getTime() + Duration.ofMinutes(5).toMillis();
-        expiration.setTime(expTimeMillis);
+        Date expiration = new Date(System.currentTimeMillis()+DOWNLOAD_URL_EXPIRATION_MILLIS);
 
         GeneratePresignedUrlRequest generatePresignedUrlRequest =
                 new GeneratePresignedUrlRequest(bucketName, objectKey)
