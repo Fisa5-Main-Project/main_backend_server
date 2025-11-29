@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.user.service;
 
+import com.know_who_how.main_server.global.entity.Asset.Asset;
 import com.know_who_how.main_server.global.entity.Keyword.Keyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.User.User;
@@ -26,6 +27,13 @@ public class UserService {
 
     public UserResponseDto getUserInfo(User user) {
         return UserResponseDto.from(user);
+    }
+
+    public List<UserAssetResponseDto> getUserAssets(User user) {
+        List<Asset> assets = assetsRepository.findByUser(user);
+        return assets.stream()
+                .map(UserAssetResponseDto::from)
+                .collect(Collectors.toList());
     }
 
     @Transactional

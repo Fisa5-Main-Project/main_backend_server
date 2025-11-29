@@ -35,6 +35,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.onSuccess(userInfo));
     }
 
+    @GetMapping("/assets")
+    @Operation(summary = "로그인한 사용자의 자산 목록 조회", description = "인증된 사용자의 모든 자산(예금, 대출 등) 목록을 조회합니다.")
+    public ResponseEntity<ApiResponse<List<UserAssetResponseDto>>> getMyAssets(@AuthenticationPrincipal User user) {
+        List<UserAssetResponseDto> userAssets = userService.getUserAssets(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess(userAssets));
+    }
+
     @PatchMapping("/profile")
     @Operation(summary = "사용자 프로필 정보 수정", description = "로그인한 사용자의 프로필 정보를 수정합니다.")
     @ApiResponses({
