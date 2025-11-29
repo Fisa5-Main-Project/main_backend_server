@@ -53,7 +53,7 @@ public class MydataAuthService {
         // 기존 방식에선 scope yml 설정에 포함되었음
         String scope = "openid my.data.read";
 
-        // state는 보안상 사용하는 것이 좋음 (여기서는 TODO 수준으로 남겨둠)
+        // state는 보안상 사용하는 것이 좋음
         String state = "dummy-state"; // TODO: CSRF 방지용 state 생성/검증 로직 추가
 
         String url = authorizeUri
@@ -83,62 +83,44 @@ public class MydataAuthService {
         Map<String, Object> tokenResponse = exchangeCodeForToken(code);
 
         // Token 저장
-        saveTokens(userId, tokenResponse);
+        processTokenResponse(userId, tokenResponse);
     }
 
     /**
      * Authorization Code → Access/Refresh Token 교환
      */
-    private Map<String, Object> exchangeCodeForToken(String code) {
+    @Transactional
+    public Map<String, Object> exchangeCodeForToken(String code) {
         String tokenUri = mydataProperties.getAs().getTokenUri();
         if (tokenUri == null || tokenUri.isBlank()) {
             log.error("MyData tokenUri 설정이 없습니다.");
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
+
         log.info("token uri : {}, code : {}", tokenUri, code);
+        log.info("Auth 서버로 보내는 Redirect URI: {}", mydataProperties.getRedirectUri());
+
+        // Form Data 구성
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "authorization_code");
         formData.add("code", code);
         formData.add("redirect_uri", mydataProperties.getRedirectUri());
-        log.info("Auth 서버로 보내는 Redirect URI: {}", mydataProperties.getRedirectUri());
-//        formData.add("client_id", mydataProperties.getClientId());
-//        formData.add("client_secret", mydataProperties.getClientSecret());
 
-        try {
-            return mydataAuthWebClient.post()
-                    .uri(tokenUri)
-                    // Basic Auth 헤더 추가
-                    .headers(headers -> headers.setBasicAuth(
-                            mydataProperties.getClientId(),
-                            mydataProperties.getClientSecret()
-                    ))
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .acceptCharset(StandardCharsets.UTF_8)
-                    .bodyValue(formData)
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                    .block();
-        } catch (WebClientResponseException e) {
-            log.error("MyData 토큰 교환 실패 - status: {}, body: {}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
-            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
-        } catch (Exception e) {
-            log.error("MyData 토큰 교환 중 예외 발생", e);
-            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
-        }
+        // 공통 메서드 호출 (4xx 에러 시 SERVER_ERROR 발생시킴 - 기존 로직 유지)
+        return sendTokenRequest(formData, ErrorCode.MYDATA_SERVER_ERROR);
     }
 
     /**
      * 3) 토큰 응답을 파싱하여 Mydata 엔티티에 저장/갱신
      */
-    private void saveTokens(Long userId, Map<String, Object> tokenResponse) {
+    private void processTokenResponse(Long userId, Map<String, Object> tokenResponse) {
         if (tokenResponse == null) {
             throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
 
         String accessToken = (String) tokenResponse.get("access_token");
         String refreshToken = (String) tokenResponse.get("refresh_token");
+        String scope = (String) tokenResponse.get("scope");
 
         // accessToken 검증
         if (accessToken == null || accessToken.isBlank()) {
@@ -161,23 +143,24 @@ public class MydataAuthService {
         redisUtil.save(redisKey, accessToken, Duration.ofSeconds(ttlSeconds));
         log.info("Redis 저장 완료: Key={}, TTL={}초", redisKey, ttlSeconds);
 
-        // scope 검증
-        String scope = (String) tokenResponse.get("scope");
-        if(scope == null || scope.isBlank()) {
-            log.error("MyData 토큰 응답에 scope 값이 없습니다. 응답: {}", tokenResponse);
-            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
-        }
-
         mydataRepository.findById(userId)
                 .ifPresentOrElse(
-                        // 이미 연동된 유저라면 -> Refresh Token만 업데이트 (Dirty Checking)
+                        // 이미 연동된 유저 -> Refresh Token 업데이트
                         existingData -> {
                             existingData.updateRefreshToken(refreshToken);
                             log.info("RDB 업데이트 완료: UserID={}", userId);
                         },
-                        // 첫 연동이라면 -> insert
+                        // 첫 연동 -> 신규 저장
                         () -> {
+                            // 신규 저장 시에는 Scope와 RefreshToken이 필수
+                            if (scope == null || scope.isBlank()) {
+                                log.error("신규 연동인데 scope가 없습니다. UserID: {}", userId);
+                                throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
+                            }
+
+                            // Proxy 객체 사용으로 SELECT 쿼리 절약
                             User userRef = userRepository.getReferenceById(userId);
+
                             mydataRepository.save(Mydata.builder()
                                     .user(userRef)
                                     .refreshToken(refreshToken)
@@ -186,5 +169,64 @@ public class MydataAuthService {
                             log.info("RDB 신규 저장 완료: UserID={}", userId);
                         }
                 );
+    }
+
+    @Transactional
+    public String refreshAccessToken(Long userId) {
+        // DB 검증 및 Refresh Token 조회
+        Mydata mydata = mydataRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MYDATA_NOT_LINKED));
+
+        String currentRefreshToken = mydata.getRefreshToken();
+        if (currentRefreshToken == null || currentRefreshToken.isBlank()) {
+            throw new CustomException(ErrorCode.MYDATA_EXPIRED);
+        }
+
+        // Form Data 구성
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("grant_type", "refresh_token");
+        formData.add("refresh_token", currentRefreshToken);
+        // 필요한 경우 redirect_uri 추가
+
+        // 공통 메서드 호출 (4xx 에러 시 MYDATA_EXPIRED 발생시킴 - 재로그인 유도)
+        Map<String, Object> tokenResponse = sendTokenRequest(formData, ErrorCode.MYDATA_EXPIRED);
+
+        processTokenResponse(userId, tokenResponse);
+
+        return (String) tokenResponse.get("access_token");
+    }
+
+    private Map<String, Object> sendTokenRequest(MultiValueMap<String, String> formData, ErrorCode on4xxError) {
+        String tokenUri = mydataProperties.getAs().getTokenUri();
+
+        try {
+            return mydataAuthWebClient.post()
+                    .uri(tokenUri)
+                    .headers(headers -> headers.setBasicAuth(
+                            mydataProperties.getClientId(),
+                            mydataProperties.getClientSecret()
+                    ))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .acceptCharset(StandardCharsets.UTF_8)
+                    .bodyValue(formData)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .block();
+
+        } catch (WebClientResponseException e) {
+            log.error("MyData 토큰 요청 실패 - status: {}, body: {}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+
+            // 4xx 에러(클라이언트 잘못 or 만료)일 때 던질 예외를 파라미터로 받아서 처리
+            if (e.getStatusCode().is4xxClientError()) {
+                throw new CustomException(on4xxError);
+            }
+            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
+
+        } catch (Exception e) {
+            log.error("MyData 토큰 요청 중 시스템 오류 발생", e);
+            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
+        }
     }
 }

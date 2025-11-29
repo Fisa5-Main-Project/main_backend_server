@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MydataService {
 
+    private final MydataAuthService mydataAuthService;
     private final MydataProperties mydataProps;
     private final MydataRepository mydataRepository;
     private final UserRepository userRepository;
@@ -103,25 +104,24 @@ public class MydataService {
         log.info("Calling Mydata Rs: {}", url);
         MydataResponse response;
 
-        // TODO: Try-Catch 구조 수정
         try {
-            response = mydataRsWebClient
-                    .get()
-                    .uri(url)
-                    .headers(headers -> headers.setBearerAuth(accessToken))
-                    .retrieve()
-                    .bodyToMono(MydataResponse.class)
-                    .block();
+            response = callMyDataApi(url, accessToken);
+
         } catch (WebClientResponseException e) {
-            // 토큰 만료 등으로 인한 401 → MyData 연동 만료 상태로 간주
-            log.error("MyData RS response error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-                // TODO: ErrorCode.MYDATA_EXPIRED 도 enum에 추가해야함
-                throw new CustomException(ErrorCode.MYDATA_EXPIRED);
+                log.info("Access Token 만료 감지. Refresh Token으로 갱신을 시도합니다. UserID: {}", user.getUserId());
+
+                try {
+                    String newAccessToken = mydataAuthService.refreshAccessToken(user.getUserId());
+                    response = callMyDataApi(url, newAccessToken);
+                } catch (Exception refreshEx) {
+                    log.error("Refresh Token 갱신 실패. 재로그인 필요.", refreshEx);
+                    throw new CustomException(ErrorCode.MYDATA_EXPIRED);
+                }
+            } else {
+                log.error("MyData RS request error: {}", e.getMessage(), e);
+                throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
             }
-            // 그 외 RS 오류는 공통 에러 코드로 래핑
-            log.error("MyData RS request error: {}", e.getMessage(), e);
-            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
 
         // 4) RS에서 내려온 자산 타입 정규화 ("SAVINGS" -> "SAVING")
@@ -150,6 +150,17 @@ public class MydataService {
         // 6) 최종 DTO 반환 (프론트에서 바로 사용)
         return data;
     }
+
+    private MydataResponse callMyDataApi(String url, String accessToken) {
+        return mydataRsWebClient
+                .get()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .retrieve()
+                .bodyToMono(MydataResponse.class)
+                .block();
+    }
+
 
     /**
      * RS에서 내려온 자산/연금 정보를
