@@ -1,5 +1,4 @@
--- H2 데이터베이스는 기본적으로 JSON 타입을 지원하지 않으므로, 관련 정보는 TEXT 타입 컬럼에 JSON 형식의 문자열로 저장합니다.
-
+-- 필수데이터 : financial_product, term, keyword
 -- financial_product (기존 데이터 유지)
 INSERT INTO financial_product (product_name, product_type, bank_name, min_amount, max_amount, min_period_months, max_period_months, base_interest_rate, interest_rate_details, bonus_rate_details, compounding_strategy, applicable_tendency)
 VALUES (
@@ -71,6 +70,8 @@ INSERT INTO keyword (name) VALUES ('자기계발');
 INSERT INTO keyword (name) VALUES ('봉사/사회공헌');
 INSERT INTO keyword (name) VALUES ('건강/의료비');
 INSERT INTO keyword (name) VALUES ('편안한 휴식');
+
+--아래부터 유저 데이터. 필수데이터 아님!!
 
 -- Dummy Asset Data for user_id = 1 (testuser1)
 -- user_id 1은 AuthService.initTestUser()에서 생성됩니다.

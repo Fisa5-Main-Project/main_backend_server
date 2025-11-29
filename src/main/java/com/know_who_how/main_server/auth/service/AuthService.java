@@ -328,7 +328,7 @@ public class AuthService {
                     .birth(LocalDate.of(2001, 3, 24))
                     .gender(Gender.M)
                     .investmentTendancy(InvestmentTendancy.안정추구형)
-                    .userMydataRegistration(false) // 새로 추가된 필드
+                    .userMydataRegistration(true) // 새로 추가된 필드
                     .build();
             userRepository.save(testUser);
         }
