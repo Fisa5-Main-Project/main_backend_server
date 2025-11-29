@@ -52,17 +52,6 @@ public class MydataService {
     private final RedisUtil redisUtil;
 
     /**
-     * AS(인증 서버) 호출용 WebClient
-     * - /oauth2/token (authorization_code, refresh_token)
-     * - /oauth2/revoke 등
-     * 아직 이 클래스에서 직접 사용하진 않지만,
-     * 향후 토큰 갱신/폐기 로직에서 사용할 예정.
-     */
-    @Autowired
-    @Qualifier("mydataAuthWebClient")
-    private WebClient mydataAuthWebClient;
-
-    /**
      * RS(리소스 서버, MyData API) 호출용 WebClient
      * - /api/my-data/summary
      * - /api/my-data/assets/pension 등
