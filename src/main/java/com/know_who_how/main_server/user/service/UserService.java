@@ -1,12 +1,17 @@
 package com.know_who_how.main_server.user.service;
 
 import com.know_who_how.main_server.global.entity.Asset.Asset;
+import com.know_who_how.main_server.global.entity.Asset.AssetType;
+import com.know_who_how.main_server.global.entity.Asset.Pension.Pension;
 import com.know_who_how.main_server.global.entity.Keyword.Keyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.User.User;
+import com.know_who_how.main_server.global.exception.CustomException;
+import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.user.dto.*;
 import com.know_who_how.main_server.user.repository.*; // 와일드카드로 변경
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +28,8 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository; // 주입 추가
     private final UserTermRepository userTermRepository;         // 주입 추가
     private final AssetsRepository assetsRepository;           // 주입 추가
-    private final UserInfoRepository userInfoRepository;         // 주입 추가
+    private final UserInfoRepository userInfoRepository;
+    private final PensionRepository pensionRepository;
 
     public UserResponseDto getUserInfo(User user) {
         return UserResponseDto.from(user);
@@ -86,5 +92,33 @@ public class UserService {
 
         // 마지막으로 User 엔티티 삭제
         userRepository.delete(user);
+    }
+
+    public List<PensionAssetDto> getUserPensionAssets(User user) {
+        var managedUser = resolveUser(user);
+        List<com.know_who_how.main_server.global.entity.Asset.Asset> pensionAssets = assetsRepository.findByUser(managedUser)
+                .stream()
+                .filter(asset -> asset.getType() == AssetType.PENSION)
+                .collect(Collectors.toList());
+
+        List<Long> pensionAssetIds = pensionAssets.stream()
+                .map(com.know_who_how.main_server.global.entity.Asset.Asset::getAssetId)
+                .collect(Collectors.toList());
+
+        Map<Long, Pension> pensionsById = pensionRepository.findAllById(pensionAssetIds)
+                .stream()
+                .collect(Collectors.toMap(com.know_who_how.main_server.global.entity.Asset.Pension.Pension::getAssetId, p -> p));
+
+        return pensionAssets.stream()
+                .map(asset -> PensionAssetDto.from(asset, pensionsById.get(asset.getAssetId())))
+                .collect(Collectors.toList());
+    }
+
+    private User resolveUser(User user) {
+        if (user == null) {
+            throw new CustomException(ErrorCode.NOT_LOGIN_USER);
+        }
+        return userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

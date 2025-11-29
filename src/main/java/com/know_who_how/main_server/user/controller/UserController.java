@@ -106,4 +106,11 @@ public class UserController {
         userService.withdrawUser(user);
         return ResponseEntity.ok(ApiResponse.onSuccess("회원 탈퇴가 성공적으로 처리되었습니다."));
     }
+
+    @GetMapping("/assets/pensions")
+    @Operation(summary = "보유 연금 자산 목록 조회", description = "사용자의 자산 중 연금(PENSION) 유형만 반환합니다.")
+    public ResponseEntity<ApiResponse<java.util.List<PensionAssetDto>>> getPensionAssets(@AuthenticationPrincipal User user) {
+        var pensions = userService.getUserPensionAssets(user);
+        return ResponseEntity.ok(ApiResponse.onSuccess(pensions));
+    }
 }

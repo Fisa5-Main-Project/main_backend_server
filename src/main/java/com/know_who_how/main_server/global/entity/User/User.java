@@ -151,4 +151,9 @@ public class User implements UserDetails {
         // 계정이 활성화되었는지
         return true;
     }
+
+    // [추가] 마이데이터 연동 완료 상태로 마킹
+    public void markMydataRegistered() {
+        this.userMydataRegistration = true;
+    }
 }
