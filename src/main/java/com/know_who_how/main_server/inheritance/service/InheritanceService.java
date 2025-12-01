@@ -218,7 +218,7 @@ public class InheritanceService {
 
     // 비회원 접근 토큰 검증 및 S3 다운로드 URL 생성
     // 수신자가 이메일을 통해 받은 URL을 클릭했을 때 유효성 검증 후 파일 볼 수 있는 임시 권한 부여
-    @Transactional(readOnly = true)
+    @Transactional
     public String getPresignedUrlAndValidateToken(String token){
         InheritanceRecipient recipient = recipientRepository.findByAccessLink(token)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
@@ -227,6 +227,9 @@ public class InheritanceService {
         if(video == null){
             throw new CustomException(ErrorCode.VIDEO_NOT_FOUND);
         }
+
+        // 토큰을 DB에서 Null로 업데이트 (사용 후 재사용 방지)
+        recipient.invalidateLink();
 
         // 백엔드에서 설정했던 S3에서의 경로(이름)으로 다운로드 URL 생성
         return s3Service.generateDownloadPresignedUrl(video.getS3ObjectKey());

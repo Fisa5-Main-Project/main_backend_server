@@ -59,4 +59,9 @@ public class InheritanceRecipient {
     public void markSent(LocalDateTime actualSentDate) {
         this.actualSentDate = actualSentDate;
     }
+
+    // 토큰 무효화
+    public void invalidateLink(){
+        this.accessLink = null;
+    }
 }
