@@ -129,6 +129,13 @@ public class InheritanceService {
             throw new CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
         }
 
+        // InheritanceVideo 객체가 존재하는지 확인 (초기화 단계 건너뛰기 방지)
+        InheritanceVideo video = inheritance.getVideo();
+        if (video == null) {
+            // InheritanceVideo가 없으면 초기화(initiate)가 수행되지 않은 것
+            throw new CustomException(ErrorCode.VIDEO_NOT_FOUND);
+        }
+
         // S3Service를 통해 Part Upload용 Presigned URL 발급
         String s3ObjectKey = inheritance.getVideo().getS3ObjectKey();
         String partUploadUrl = s3Service.generatePartPresignedUrl(s3ObjectKey, uploadId, partNumber);
@@ -225,5 +232,4 @@ public class InheritanceService {
         return s3Service.generateDownloadPresignedUrl(video.getS3ObjectKey());
     }
     
-    // TODO: 수신자에게 이메일 보내는 로직 추가 필요
 }

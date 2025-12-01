@@ -71,8 +71,8 @@ public class User implements UserDetails {
     @ColumnDefault("false")
     private boolean userInheritanceRegistration = false; // 기본값 명시적으로 false로 설정
 
-    @OneToMany(mappedBy="user", cascade = CascadeType.ALL)
-    private List<Inheritance> inheritances = new ArrayList<>();
+    @OneToOne(mappedBy="user", cascade = CascadeType.ALL)
+    private Inheritance inheritance;
 
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
