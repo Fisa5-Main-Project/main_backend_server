@@ -2,8 +2,10 @@ package com.know_who_how.main_server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class MainServerApplication {
 
 	public static void main(String[] args) {
