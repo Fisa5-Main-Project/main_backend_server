@@ -203,7 +203,6 @@ public class InheritanceService {
             throw new  CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
         }
 
-        List<InheritanceRecipient> recipientList = new ArrayList<>();
         // 수신자 수만큼 반복
         for(RecipientRegistrationRequest req: recipients){
             // 랜덤으로 url 뒤에 붙을 토큰 생성
@@ -219,7 +218,6 @@ public class InheritanceService {
 
             video.addRecipient(recipient);
         }
-        recipientRepository.saveAll(recipientList);
     }
 
     // 비회원 접근 토큰 검증 및 S3 다운로드 URL 생성
