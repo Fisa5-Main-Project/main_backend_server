@@ -193,9 +193,15 @@ public class InheritanceService {
 
     // 영상편지 수신자 등록(토큰 생성 및 예약 설정)
     @Transactional
-    public void registerRecipients(Long videoId, List<RecipientRegistrationRequest> recipients){
+    public void registerRecipients(Long userId, Long videoId, List<RecipientRegistrationRequest> recipients){
         InheritanceVideo video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.VIDEO_NOT_FOUND));
+
+        Long ownerUserId = video.getInheritance().getUser().getUserId();
+
+        if(!ownerUserId.equals(userId)){
+            throw new  CustomException(ErrorCode.FORBIDDEN_INHERITANCE_ACCESS);
+        }
 
         List<InheritanceRecipient> recipientList = new ArrayList<>();
         // 수신자 수만큼 반복

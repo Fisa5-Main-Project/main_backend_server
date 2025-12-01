@@ -129,13 +129,16 @@ public class InheritanceController {
     /**
      * 영상편지 수신자 등록
      */
-    @Operation(summary = "영상편지 수신자 및 예약 등록", description = "업로드된 영상에 대해 수신자 목록과 발송 예약 시점을 등록합니다. 각 수신자별 고유 토큰(accessLink)이 생성됩니다.")
+    @Operation(summary = "영상편지 수신자 및 예약 등록", description = "업로드된 영상에 대해 수신자 목록과 발송 예약 시점을 등록합니다. 각 수신자별 고유 토큰(accessLink)이 생성됩니다. (소유자만 가능)")
     @PostMapping("/video/{videoId}/recipients")
     public ResponseEntity<ApiResponse<Void>> registerRecipients(
+            @AuthenticationPrincipal User user,
             @PathVariable Long videoId,
             @RequestBody RecipientListRequest request){
 
-        inheritanceService.registerRecipients(videoId, request.recipients());
+        Long userId = user.getUserId();
+
+        inheritanceService.registerRecipients(userId, videoId, request.recipients());
 
         return ResponseEntity.ok(ApiResponse.onSuccess());
     }
