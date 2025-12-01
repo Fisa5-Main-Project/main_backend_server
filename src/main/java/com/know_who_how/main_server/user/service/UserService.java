@@ -42,6 +42,34 @@ public class UserService {
         return UserResponseDto.from(user);
     }
 
+    @Transactional
+    public void addUserAssets(User user, UserAssetAddRequest request) {
+        User foundUser = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        java.util.List<Asset> assets = new java.util.ArrayList<>();
+
+        if (request.getRealEstate() != null) {
+            assets.add(Asset.builder()
+                    .user(foundUser)
+                    .type(AssetType.REAL_ESTATE)
+                    .balance(new java.math.BigDecimal(request.getRealEstate()))
+                    .build());
+        }
+
+        if (request.getCar() != null) {
+            assets.add(Asset.builder()
+                    .user(foundUser)
+                    .type(AssetType.AUTOMOBILE)
+                    .balance(new java.math.BigDecimal(request.getCar()))
+                    .build());
+        }
+
+        if (!assets.isEmpty()) {
+            assetsRepository.saveAll(assets);
+        }
+    }
+
     public List<UserAssetResponseDto> getUserAssets(User user) {
         List<Asset> assets = assetsRepository.findByUser(user);
         return assets.stream()

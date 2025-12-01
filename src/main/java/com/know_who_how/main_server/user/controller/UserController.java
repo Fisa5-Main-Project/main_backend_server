@@ -35,6 +35,15 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.onSuccess(userInfo));
     }
 
+    @PostMapping("/assets-add")
+    @Operation(summary = "사용자 추가 자산 정보 저장", description = "사용자의 부동산 및 자동차 자산 정보를 저장합니다.")
+    public ResponseEntity<ApiResponse<Void>> addUserAssets(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UserAssetAddRequest request) {
+        userService.addUserAssets(user, request);
+        return new ResponseEntity<>(ApiResponse.onSuccess(null), org.springframework.http.HttpStatus.CREATED);
+    }
+
     @GetMapping("/assets")
     @Operation(summary = "로그인한 사용자의 자산 목록 조회", description = "인증된 사용자의 모든 자산(예금, 대출 등) 목록을 조회합니다.")
     public ResponseEntity<ApiResponse<List<UserAssetResponseDto>>> getMyAssets(@AuthenticationPrincipal User user) {
