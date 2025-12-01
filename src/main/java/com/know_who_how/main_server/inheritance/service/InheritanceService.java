@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -197,6 +198,7 @@ public class InheritanceService {
         InheritanceVideo video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.VIDEO_NOT_FOUND));
 
+        List<InheritanceRecipient> recipientList = new ArrayList<>();
         // 수신자 수만큼 반복
         for(RecipientRegistrationRequest req: recipients){
             // 랜덤으로 url 뒤에 붙을 토큰 생성
@@ -211,8 +213,8 @@ public class InheritanceService {
                     .build();
 
             video.addRecipient(recipient);
-            recipientRepository.save(recipient);
         }
+        recipientRepository.saveAll(recipientList);
     }
 
     // 비회원 접근 토큰 검증 및 S3 다운로드 URL 생성
