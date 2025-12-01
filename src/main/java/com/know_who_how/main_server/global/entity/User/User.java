@@ -147,7 +147,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        
+
         // 계정이 활성화되었는지
         return true;
     }
