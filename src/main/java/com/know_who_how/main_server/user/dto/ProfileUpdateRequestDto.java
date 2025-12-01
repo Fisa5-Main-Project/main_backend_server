@@ -15,4 +15,5 @@ public class ProfileUpdateRequestDto {
     private String phoneNum;
 
     // TODO: 필요하면 다른 수정 필드들 추가
+
 }

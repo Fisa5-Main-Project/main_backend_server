@@ -12,4 +12,5 @@ public class InvestmentTendencyUpdateRequestDto {
     @Schema(description = "수정할 투자 성향", example = "안정추구형")
     @NotNull(message = "투자 성향은 필수 입력 항목입니다.")
     private InvestmentTendancy investmentTendancy;
+
 }

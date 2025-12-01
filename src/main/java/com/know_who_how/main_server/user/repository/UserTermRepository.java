@@ -7,6 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserTermRepository extends JpaRepository<UserTerm, Long> {
-
     void deleteAllByUser(User user);
 }
