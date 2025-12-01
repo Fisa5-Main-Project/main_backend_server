@@ -2,10 +2,7 @@ package com.know_who_how.main_server.global.entity.User;
 
 import com.know_who_how.main_server.global.entity.Inheritance.Inheritance;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,7 +19,9 @@ import java.util.stream.Collectors;
  */
 @Entity
 @Table(name = "users")
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class User implements UserDetails {
 
     @Id
