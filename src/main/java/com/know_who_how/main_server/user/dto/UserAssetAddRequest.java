@@ -23,4 +23,5 @@ public class UserAssetAddRequest {
     @Schema(description = "자동차 자산 가액", example = "25000000")
     @PositiveOrZero(message = "자동차 자산 가액은 0 또는 양수여야 합니다.")
     private Long car;
+
 }

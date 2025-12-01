@@ -29,4 +29,5 @@ public class UserAssetResponseDto {
                 .bankCode(asset.getBankCode())
                 .build();
     }
+
 }

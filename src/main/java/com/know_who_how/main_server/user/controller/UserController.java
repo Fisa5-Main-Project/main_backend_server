@@ -122,4 +122,5 @@ public class UserController {
         var pensions = userService.getUserPensionAssets(user);
         return ResponseEntity.ok(ApiResponse.onSuccess(pensions));
     }
+
 }

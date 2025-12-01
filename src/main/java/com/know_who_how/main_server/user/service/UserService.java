@@ -32,9 +32,9 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserKeywordRepository userKeywordRepository;
     private final KeywordRepository keywordRepository;
-    private final RefreshTokenRepository refreshTokenRepository; // 주입 추가
-    private final UserTermRepository userTermRepository;         // 주입 추가
-    private final AssetsRepository assetsRepository;           // 주입 추가
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final UserTermRepository userTermRepository;
+    private final AssetsRepository assetsRepository;
     private final UserInfoRepository userInfoRepository;
     private final PensionRepository pensionRepository;
 
