@@ -168,7 +168,6 @@ public class InheritanceService {
         String s3ObjectKey = inheritance.getVideo().getS3ObjectKey();
         s3Service.completeMultipartUpload(s3ObjectKey, request.uploadId(), partETags);
 
-        // TODO: 업로드 완료 후 InheritanceVideo 엔티티에 최종 파일 크기/상태 등 추가 정보 업데이트 필요 시 로직 추가
     }
 
 
@@ -224,13 +223,18 @@ public class InheritanceService {
         InheritanceRecipient recipient = recipientRepository.findByAccessLink(token)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_ACCESS_TOKEN));
 
+        // 이미 사용된 링크인지 확인
+        if (recipient.isLinkUsed()) {
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN); // 이미 사용됨
+        }
+
         InheritanceVideo video = recipient.getVideo();
         if(video == null){
             throw new CustomException(ErrorCode.VIDEO_NOT_FOUND);
         }
 
-        // 토큰을 DB에서 Null로 업데이트 (사용 후 재사용 방지)
-        recipient.invalidateLink();
+        // accessLink 사용 플래그를 true로 변경
+        recipient.markLinkUsed();
 
         // 백엔드에서 설정했던 S3에서의 경로(이름)으로 다운로드 URL 생성
         return s3Service.generateDownloadPresignedUrl(video.getS3ObjectKey());

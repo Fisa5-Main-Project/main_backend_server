@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,6 +42,11 @@ public class InheritanceRecipient {
     @Column(name = "access_link", nullable = false, unique = true)
     private String accessLink;
 
+    // ⭐️ [추가] 토큰 사용 여부 플래그
+    @Column(name = "is_link_used", nullable = false)
+    @ColumnDefault("false")
+    private boolean isLinkUsed = false;
+
     @Builder
     public InheritanceRecipient(InheritanceVideo video, String email, String accessLink, LocalDateTime scheduledSendDate) {
         this.video = video;
@@ -60,8 +66,9 @@ public class InheritanceRecipient {
         this.actualSentDate = actualSentDate;
     }
 
-    // 토큰 무효화
-    public void invalidateLink(){
-        this.accessLink = null;
+    // 해당 링크가 이미 사용된 링크인지
+    public void markLinkUsed() {
+        this.isLinkUsed = true;
     }
+
 }
