@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "inheritance")
 @Getter
-@Setter
 @NoArgsConstructor
 public class Inheritance {
 

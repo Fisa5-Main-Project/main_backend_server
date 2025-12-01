@@ -76,6 +76,25 @@ public class InheritanceService {
     }
 
     /**
+     * 상속 계획 정보를 조회 (읽기 전용)
+     * @param userId 현재 인증된 사용자 ID
+     * @return InheritancePlanResponse 상속 계획 데이터
+     */
+    @Transactional(readOnly = true)
+    public InheritancePlanResponse getInheritancePlan(Long userId) {
+        // userId로 상속 계획을 조회합니다.
+        Inheritance inheritance = inheritanceRepository.findByUser_UserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INHERITANCE_NOT_FOUND));
+
+        // DTO로 매핑하여 반환합니다.
+        return new InheritancePlanResponse(
+                inheritance.getInheritanceId(),
+                inheritance.getAsset(),
+                inheritance.getRatio()
+        );
+    }
+
+    /**
      * [1] Multipart Upload 시작 및 S3 Upload ID 반환
      */
     @Transactional

@@ -63,6 +63,21 @@ public class InheritanceController {
     }
 
     /**
+     * 상속 계획 조회 API
+     */
+    @Operation(summary = "상속 계획 조회", description = "현재 사용자의 등록된 상속 자산 및 비율 정보를 조회합니다.")
+    @GetMapping("/plan")
+    public ResponseEntity<ApiResponse<InheritancePlanResponse>> getInheritancePlan(
+            @AuthenticationPrincipal User user) {
+
+        Long userId = user.getUserId();
+
+        InheritancePlanResponse response = inheritanceService.getInheritancePlan(userId);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
      * [1] Multipart Upload 시작 및 Presigned URL 요청 (Initialization)
      */
     @Operation(summary = "영상 업로드 시작", description = "S3 Multipart Upload를 시작하고 Upload ID 및 Presigned URL 요청에 필요한 정보를 받습니다.")
