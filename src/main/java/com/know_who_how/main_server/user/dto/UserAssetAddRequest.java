@@ -11,17 +11,15 @@ import lombok.Setter;
  * 부동산 자산 가액과 자동차 자산 가액을 포함합니다.
  */
 @Getter
-@Setter
-@NoArgsConstructor
+@lombok.AllArgsConstructor
 @Schema(description = "사용자 추가 자산 정보 저장 요청")
 public class UserAssetAddRequest {
 
     @Schema(description = "부동산 자산 가액", example = "300000000")
     @PositiveOrZero(message = "부동산 자산 가액은 0 또는 양수여야 합니다.")
-    private Long realEstate;
+    private final Long realEstate;
 
     @Schema(description = "자동차 자산 가액", example = "25000000")
     @PositiveOrZero(message = "자동차 자산 가액은 0 또는 양수여야 합니다.")
-    private Long car;
-
+    private final Long car;
 }

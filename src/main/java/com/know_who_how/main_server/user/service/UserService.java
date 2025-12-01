@@ -20,6 +20,8 @@ import com.know_who_how.main_server.user.repository.UserTermRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +38,6 @@ public class UserService {
     private final KeywordRepository keywordRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserTermRepository userTermRepository;
-    private final AssetsRepository assetsRepository;
     private final UserInfoRepository userInfoRepository;
     private final PensionRepository pensionRepository;
 
@@ -49,8 +50,7 @@ public class UserService {
         User foundUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        java.util.List<Asset> assets = new java.util.ArrayList<>();
-
+        List<Asset> assets = new java.util.ArrayList<>();
         if (request.getRealEstate() != null) {
             assets.add(Asset.builder()
                     .user(foundUser)
@@ -58,7 +58,6 @@ public class UserService {
                     .balance(new java.math.BigDecimal(request.getRealEstate()))
                     .build());
         }
-
         if (request.getCar() != null) {
             assets.add(Asset.builder()
                     .user(foundUser)

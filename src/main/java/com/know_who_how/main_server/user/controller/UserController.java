@@ -41,7 +41,7 @@ public class UserController {
             @AuthenticationPrincipal User user,
             @Valid @RequestBody UserAssetAddRequest request) {
         userService.addUserAssets(user, request);
-        return new ResponseEntity<>(ApiResponse.onSuccess(null), org.springframework.http.HttpStatus.CREATED);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(ApiResponse.onSuccess(null));
     }
 
     @GetMapping("/assets")
