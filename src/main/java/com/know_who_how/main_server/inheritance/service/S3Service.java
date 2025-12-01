@@ -82,10 +82,17 @@ public class S3Service {
     public String generateDownloadPresignedUrl(String objectKey){
         Date expiration = new Date(System.currentTimeMillis()+DOWNLOAD_URL_EXPIRATION_MILLIS);
 
+
+        // 캐싱 방지 HTTP 헤더 설정: 클라이언트(브라우저/CDN)가 이 응답을 캐시하지 않도록 강제
+        ResponseHeaderOverrides overrides = new ResponseHeaderOverrides()
+                .withCacheControl("no-cache, no-store, must-revalidate")
+                .withExpires("0");
+
         GeneratePresignedUrlRequest generatePresignedUrlRequest =
                 new GeneratePresignedUrlRequest(bucketName, objectKey)
                         .withMethod(HttpMethod.GET)
-                        .withExpiration(expiration);
+                        .withExpiration(expiration)
+                        .withResponseHeaders(overrides);
 
         return amazonS3.generatePresignedUrl(generatePresignedUrlRequest).toString();
     }
