@@ -82,7 +82,7 @@ INSERT INTO assets (user_id, type, balance, bank_code) VALUES
 (1, 'PENSION', 150000000, NULL),
 (1, 'AUTOMOBILE', 30000000, NULL),
 (1, 'REAL_ESTATE', 800000000, NULL),
-(1, 'LOAN', -300000000, NULL);
+(1, 'LOAN', 300000000, NULL);
 
 -- Dummy Pension Data for user_id = 1 (linked to the PENSION asset above)
 INSERT INTO pension (asset_id, updated_at, pension_type, account_name, principal, personal_contrib, contrib_year, total_personal_contrib) VALUES
