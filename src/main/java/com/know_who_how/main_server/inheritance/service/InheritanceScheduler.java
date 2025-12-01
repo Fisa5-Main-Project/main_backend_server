@@ -23,7 +23,7 @@ public class InheritanceScheduler {
     @Value("${app.service-base-url}")
     private String serviceBaseUrl;
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void processScheduledVideoEmails(){
         LocalDateTime now = LocalDateTime.now();
