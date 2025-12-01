@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.net.URI;
 
 @RestController
+@RequestMapping("/api/v1/inheritance")
 @RequiredArgsConstructor
 public class InheritanceController {
 
@@ -26,7 +27,7 @@ public class InheritanceController {
     /**
      * 상속 등록 여부 조회 API
      */
-    @GetMapping("/inheritance/status")
+    @GetMapping("/status")
     public ResponseEntity<ApiResponse<InheritanceStatusResponse>> getInheritanceStatus(
             @AuthenticationPrincipal User user){
 
@@ -39,8 +40,8 @@ public class InheritanceController {
     /**
      * 상속 계획 저장/업데이트 API
      */
-    @PostMapping("/inheritance/plan")
-    public ResponseEntity<ApiResponse<Long>> createOrUpdateInheritancePlan(
+    @PostMapping("/plan")
+    public ResponseEntity<ApiResponse<InheritanceIdResponse>> createOrUpdateInheritancePlan(
             @AuthenticationPrincipal User user,
             @RequestBody InheritancePlanRequest request){
 
@@ -50,13 +51,13 @@ public class InheritanceController {
 
         Long inheritanceId = inheritanceService.saveOrUpdateInheritancePlan(userId, asset, ratio);
 
-        return ResponseEntity.ok(ApiResponse.onSuccess(inheritanceId));
+        return ResponseEntity.ok(ApiResponse.onSuccess(new InheritanceIdResponse(inheritanceId)));
     }
 
     /**
      * [1] Multipart Upload 시작 및 Presigned URL 요청 (Initialization)
      */
-    @PostMapping("/inheritance/{inheritanceId}/video/upload/init")
+    @PostMapping("/{inheritanceId}/video/upload/init")
     public ResponseEntity<ApiResponse<VideoUploadInitResponse>> initiateVideoUpload(
             @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId){
@@ -70,7 +71,7 @@ public class InheritanceController {
     /**
      * [2] Multipart Upload 조각(Part) 업로드용 Presigned URL 요청
      */
-    @GetMapping("/inheritance/{inheritanceId}/video/upload/part")
+    @GetMapping("/{inheritanceId}/video/upload/part")
     public ResponseEntity<ApiResponse<VideoPartUrlResponse>> getPartUploadUrl(
             @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId,
@@ -86,7 +87,7 @@ public class InheritanceController {
     /**
      * [3] Multipart Upload 완료 (Completion)
      */
-    @PostMapping("/inheritance/{inheritanceId}/video/upload/complete")
+    @PostMapping("/{inheritanceId}/video/upload/complete")
     public ResponseEntity<ApiResponse<Void>> completeVideoUpload(
             @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId,
@@ -101,7 +102,7 @@ public class InheritanceController {
     /**
      * 영상편지 삭제 API
      */
-    @DeleteMapping("/inheritance/{inheritanceId}/video")
+    @DeleteMapping("/{inheritanceId}/video")
     public ResponseEntity<ApiResponse<Void>> deleteVideo(
             @AuthenticationPrincipal User user,
             @PathVariable Long inheritanceId){
@@ -116,7 +117,7 @@ public class InheritanceController {
     /**
      * 영상편지 수신자 등록
      */
-    @PostMapping("/inheritance/video/{videoId}/recipients")
+    @PostMapping("/video/{videoId}/recipients")
     public ResponseEntity<ApiResponse<Void>> registerRecipients(
             @PathVariable Long videoId,
             @RequestBody RecipientListRequest request){
@@ -129,7 +130,7 @@ public class InheritanceController {
     /**
      * 비회원 영상편지 조회용 API (토큰 검증 및 S3 리다이렉션)
      */
-    @GetMapping("/inheritance/view-redirect")
+    @GetMapping("/video-letter")
     public ResponseEntity<Void> redirectToVideo(@RequestParam("token") String token){
 
         String presignedUrl = inheritanceService.getPresignedUrlAndValidateToken(token);

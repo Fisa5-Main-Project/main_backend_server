@@ -185,15 +185,18 @@ public class InheritanceService {
         inheritance.setVideo(null);
     }
 
-    // 영상편지 수신자 등록
+    // 영상편지 수신자 등록(토큰 생성 및 예약 설정)
     @Transactional
     public void registerRecipients(Long videoId, List<RecipientRegistrationRequest> recipients){
         InheritanceVideo video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.VIDEO_NOT_FOUND));
 
+        // 수신자 수만큼 반복
         for(RecipientRegistrationRequest req: recipients){
+            // 랜덤으로 url 뒤에 붙을 토큰 생성
             String accessLinkToken = UUID.randomUUID().toString();
 
+            // 비디오, 이메일, 생성된 링크 토큰, 전송 예정 날짜를 포함해 레코드 생성
             InheritanceRecipient recipient = InheritanceRecipient.builder()
                     .video(video)
                     .email(req.email())
@@ -207,6 +210,7 @@ public class InheritanceService {
     }
 
     // 비회원 접근 토큰 검증 및 S3 다운로드 URL 생성
+    // 수신자가 이메일을 통해 받은 URL을 클릭했을 때 유효성 검증 후 파일 볼 수 있는 임시 권한 부여
     @Transactional(readOnly = true)
     public String getPresignedUrlAndValidateToken(String token){
         InheritanceRecipient recipient = recipientRepository.findByAccessLink(token)
@@ -217,6 +221,7 @@ public class InheritanceService {
             throw new CustomException(ErrorCode.VIDEO_NOT_FOUND);
         }
 
+        // 백엔드에서 설정했던 S3에서의 경로(이름)으로 다운로드 URL 생성
         return s3Service.generateDownloadPresignedUrl(video.getS3ObjectKey());
     }
     
