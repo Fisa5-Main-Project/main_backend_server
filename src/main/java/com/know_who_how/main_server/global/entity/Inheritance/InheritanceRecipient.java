@@ -54,4 +54,9 @@ public class InheritanceRecipient {
     public void setVideo(InheritanceVideo video) {
         this.video = video;
     }
+
+    // 이메일 발송 성공 시 호출되어 실제 발송 시간 기록
+    public void markSent(LocalDateTime actualSentDate) {
+        this.actualSentDate = actualSentDate;
+    }
 }

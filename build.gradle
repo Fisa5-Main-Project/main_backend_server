@@ -53,6 +53,10 @@ dependencies {
     // ------ S3 관련 의존성 ------
     implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
 
+    // ------ 이메일 전송 관련 의존성 ------
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'jakarta.mail:jakarta.mail-api:2.1.2'
+
 }
 
 jacoco {
