@@ -119,7 +119,6 @@ public class InheritanceService {
      */
     @Transactional(readOnly = true)
     public VideoPartUrlResponse generatePartUploadUrl(Long userId, Long inheritanceId, String uploadId, int partNumber){
-        // 상속 계획 소유주 및 영상 존재 여부 검증 (생략: initiate 단계에서 이미 검증되었고, 여기선 간단히 S3Service로 위임)
 
         // S3 객체 키를 찾기 위해 Inheritance 객체 조회
         Inheritance inheritance = inheritanceRepository.findById(inheritanceId)
