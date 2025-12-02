@@ -34,6 +34,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        // 관리자 API 경로는 토큰 검증을 임시로 건너뜀
+        if(request.getRequestURI().startsWith("/api/v1/admin/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = resolveToken(request);
 
         try {

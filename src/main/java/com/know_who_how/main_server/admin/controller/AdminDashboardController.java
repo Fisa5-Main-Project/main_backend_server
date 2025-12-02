@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@RequiredArgsConstructor // Lombok을 사용하여 AdminDashboardService를 주입
+@RequiredArgsConstructor
 public class AdminDashboardController {
 
     private final AdminDashboardService adminDashboardService;
