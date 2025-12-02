@@ -4,10 +4,12 @@ import com.know_who_how.main_server.global.entity.Inheritance.Inheritance;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -53,6 +55,10 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "investment_tendancy")
     private InvestmentTendancy investmentTendancy;
+
+    @CreationTimestamp
+    @Column(name = "created_date", nullable = false, updatable = false)
+    private LocalDateTime createdDate;
 
     // === 소셜 로그인 연동 필드 ===
     @Column(name = "provider")
