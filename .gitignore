@@ -132,5 +132,12 @@ $RECYCLE.BIN/
 application-prod.yml
 application-local.yml
 application-secret.yml
-application-**.properties
+*.properties
 application.yml
+
+# Settings
+build/
+application-**.properties
+
+#ib_*
+data/mysql/

@@ -52,7 +52,8 @@ public class SecurityConfig {
             "/v3/api-docs/**",                      // OpenAPI 3.0 Docs
             "/v1/api-docs/**",                      // Swagger API Docs (application.yml 설정)
             "/webjars/**",                          // Swagger UI Webjars
-            "/error"
+            "/error",
+            "/api/v1/inheritance/video-letter/**"
     };
 
     @Bean
@@ -121,7 +122,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // FE 주소 정해지면 추가
-        configuration.setAllowedOrigins(List.of("https://knowwhohow.site","http://localhost:3000"));
+        configuration.setAllowedOrigins(List.of("https://knowwhohow.site","http://localhost:3000", "http://192.168.1.66:3000"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

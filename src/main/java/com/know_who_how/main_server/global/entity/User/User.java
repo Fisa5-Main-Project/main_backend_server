@@ -1,10 +1,9 @@
 package com.know_who_how.main_server.global.entity.User;
 
+import com.know_who_how.main_server.global.entity.Inheritance.Inheritance;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,7 +19,8 @@ import java.util.stream.Collectors;
  */
 @Entity
 @Table(name = "users")
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User implements UserDetails {
 
     @Id
@@ -61,12 +61,23 @@ public class User implements UserDetails {
     @Column(name = "provider_id", unique = true)
     private String providerId; // OAuth2 제공자별 고유 ID
 
+    @Column(name = "user_mydata_registration", nullable = false)
+    private boolean userMydataRegistration; // 마이데이터 연동 여부 (기본값: false)
+
+    // 상속 기록 여부
+    @Column(name = "user_inheritance_registration", nullable = false)
+    @ColumnDefault("false")
+    private boolean userInheritanceRegistration = false; // 기본값 명시적으로 false로 설정
+
+    @OneToOne(mappedBy="user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Inheritance inheritance;
+
     // Spring Security 권한 (DB에 저장하지 않음)
     @Transient // DB 컬럼에 매핑하지 않음
     private List<String> roles = new ArrayList<>();
 
     @Builder
-    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId) {
+    public User(String loginId, String password, String phoneNum, LocalDate birth, Gender gender, String name, Long assetTotal, InvestmentTendancy investmentTendancy, String provider, String providerId, boolean userMydataRegistration) {
         this.loginId = loginId;
         this.password = password;
         this.phoneNum = phoneNum;
@@ -77,6 +88,7 @@ public class User implements UserDetails {
         this.investmentTendancy = investmentTendancy;
         this.provider = provider;
         this.providerId = providerId;
+        this.userMydataRegistration = userMydataRegistration;
         this.roles.add("ROLE_USER"); // 회원가입 시 기본 권한
     }
 
@@ -84,6 +96,20 @@ public class User implements UserDetails {
     public void updateSocialInfo(String provider, String providerId) {
         this.provider = provider;
         this.providerId = providerId;
+    }
+
+    public void updateAssetTotal(Long assetTotal) {
+        this.assetTotal = assetTotal;
+    }
+
+    // 전화번호 업데이트 메서드 추가
+    public void updatePhoneNum(String phoneNum) {
+        this.phoneNum = phoneNum;
+    }
+
+    // 투자 성향 업데이트 메서드 추가
+    public void updateInvestmentTendancy(InvestmentTendancy investmentTendancy) {
+        this.investmentTendancy = investmentTendancy;
     }
 
     // === UserDetails 인터페이스 구현 메서드 ===
@@ -129,8 +155,19 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        
+
         // 계정이 활성화되었는지
         return true;
     }
+
+    // [추가] 마이데이터 연동 완료 상태로 마킹
+    public void markMydataRegistered() {
+        this.userMydataRegistration = true;
+    }
+    // === 상속 관련 메서드 ===
+    public void markInheritanceRegistered(){
+        this.userInheritanceRegistration = true;
+    }
+
+
 }
