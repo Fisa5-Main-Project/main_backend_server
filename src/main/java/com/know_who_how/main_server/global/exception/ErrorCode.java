@@ -66,8 +66,15 @@ public enum ErrorCode {
     // Mydata Exception
     MYDATA_EXPIRED(HttpStatus.UNAUTHORIZED, "MYDATA_001", "마이데이터 연동 토큰이 만료되었습니다. 재연동이 필요합니다."),
     MYDATA_NOT_LINKED(HttpStatus.BAD_REQUEST, "MYDATA_002", "마이데이터 연동 정보(토큰)가 없습니다."),
-    MYDATA_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MYDATA_003", "마이데이터 토근 교환 오류가 발생했습니다.");
+    MYDATA_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MYDATA_003", "마이데이터 토근 교환 오류가 발생했습니다."),
 
+    // inheritance exception
+    INHERITANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "INHERITANCE_001", "요청하신 상속 정보를 찾을 수 없습니다."),
+    VIDEO_NOT_FOUND(HttpStatus.NOT_FOUND, "INHERITANCE_002", "해당 영상편지 정보를 찾을 수 없습니다."),
+    RECIPIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "INHERITANCE_003", "해당 수신자 정보를 찾을 수 없습니다."),
+    FORBIDDEN_INHERITANCE_ACCESS(HttpStatus.FORBIDDEN, "INHERITANCE_004", "해당 상속 정보에 접근 권한이 없습니다."),
+    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "INHERITANCE_005", "유효하지 않거나 만료된 영상 접근 토큰입니다."),
+    VIDEO_ALREADY_EXISTS(HttpStatus.CONFLICT, "INHERITANCE_006", "이미 등록된 영상편지가 존재합니다. 삭제 후 다시 시도해주세요.");
 
     private final HttpStatus status;    // HTTP 상태
     private final String code;          // API 응답에 사용할 커스텀 에러 코드 (HTTP 상태 코드와 동일하게)
