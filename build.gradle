@@ -57,6 +57,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'jakarta.mail:jakarta.mail-api:2.1.2'
 
+    testImplementation 'com.h2database:h2'
+
 }
 
 jacoco {

@@ -19,6 +19,13 @@ spring:
     show-sql: false
     open-in-view: false
 
+  sql:
+    init:
+      mode: never # data.sql 사용을 명시
+      platform: h2 # H2 DB 플랫폼 명시
+      # JPA DDL이 완료된 후에 data.sql을 실행하도록 지연 설정
+      defer-datasource-initialization: true
+
   # 3. REDIS 설정 (실제 연결 방지)
   data:
     redis:
@@ -79,8 +86,8 @@ open-api:
 
 jwt:
   # NotBlank/NotNull 예외 방지용 긴 더미 키
-  secret: test-jwt-secret-key-for-test-environment-security-must-be-long-enough-to-prevent-error
-  refresh-secret: test-refresh-secret-key-for-test-environment-security-must-be-long-enough-to-prevent-error
+  secret: c3ByaW5nLWJvb3QtdGVzdC1hdXRoLWtleS13aWxsLWJlLTQ4LWNoYXJhY3RlcnM=
+  refresh-secret: c3ByaW5nLWJvb3QtcmVmcmVzaC1rZXktd2lsbC1iZS00OC1jaGFyYWN0ZXJzLWZm
   access-token-validity-in-seconds: 1800
   refresh-token-validity-in-seconds: 604800
 
