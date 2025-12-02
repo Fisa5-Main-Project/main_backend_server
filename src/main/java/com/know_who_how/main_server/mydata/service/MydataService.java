@@ -183,21 +183,19 @@ public class MydataService {
                 .collect(Collectors.toList());
 
         // LiabilityDto -> Asset(LOAN) 변환 (부채는 양수로 저장)
-        List<Asset> loanAssets = liabilityDtos.stream()
+        java.util.stream.Stream<Asset> loanAssetsStream = liabilityDtos.stream()
                 .filter(dto -> dto.getBalance() != null)
                 .map(dto -> Asset.builder()
                         .user(managedUser)
                         .type(AssetType.LOAN)
                         .balance(dto.getBalance().abs())
                         .bankCode(dto.getBankCode())
-                        .build())
-                .collect(Collectors.toList());
-
+                        .build());
         // Asset 저장 (자산 + 부채(LOAN))
-        List<Asset> assetsToSave = assetMappings.stream()
-                .map(AssetMapping::asset)
-                .collect(Collectors.toCollection(java.util.ArrayList::new));
-        assetsToSave.addAll(loanAssets);
+        List<Asset> assetsToSave = java.util.stream.Stream.concat(
+                assetMappings.stream().map(AssetMapping::asset),
+                loanAssetsStream
+        ).collect(Collectors.toList());
         assetsRepository.saveAll(assetsToSave);
 
         // Asset 중 PENSION 타입만 골라 Pension 엔티티로 저장
