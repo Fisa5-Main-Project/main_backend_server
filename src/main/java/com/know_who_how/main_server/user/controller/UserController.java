@@ -129,4 +129,5 @@ public class UserController {
         userService.completeMyDataRegistration(user.getUserId());
         return ResponseEntity.ok(ApiResponse.onSuccess("마이데이터 연동이 완료되었습니다."));
     }
+
 }
