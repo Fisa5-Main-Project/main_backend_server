@@ -157,4 +157,10 @@ public class UserService {
         return userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
+    @Transactional
+    public void completeMyDataRegistration(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.markMydataRegistered();
+    }
 }

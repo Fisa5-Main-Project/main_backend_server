@@ -87,15 +87,20 @@ public class AuthService {
         }
 
         // 1. verificationId를 통해 SMS 인증 정보 조회
-        SmsCertificationRequestDto smsRequestDto = smsCertificationService.getUserVerificationData(requestDto.getVerificationId());
+        SmsCertificationRequestDto smsRequestDto = smsCertificationService
+                .getUserVerificationData(requestDto.getVerificationId());
 
         // 2. 아이디 중복 확인
         userRepository.findByLoginId(requestDto.getLoginId())
-                .ifPresent(user -> { throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE); });
+                .ifPresent(user -> {
+                    throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
+                });
 
         // 3. 전화번호 중복 확인 (SMS 인증 정보에서 가져온 전화번호 사용)
         userRepository.findByPhoneNum(smsRequestDto.getPhoneNum())
-                .ifPresent(user -> { throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE); });
+                .ifPresent(user -> {
+                    throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+                });
 
         // 4. 비밀번호 확인 (passwordConfirm 필드 제거로 인해 확인 로직 삭제)
 
@@ -164,7 +169,7 @@ public class AuthService {
      * 2. RDB의 Refresh Token과 대조 후 삭제
      * 3. Access Token을 남은 유효기간만큼 블랙리스트에 추가
      *
-     * @param accessToken Access Token
+     * @param accessToken  Access Token
      * @param refreshToken 로그아웃 요청 DTO (RefreshToken 포함)
      */
     @Transactional
@@ -208,8 +213,8 @@ public class AuthService {
     @Transactional
     public TokenResponseDto login(LoginRequestDto requestDto) {
         // 1. UsernamePasswordAuthenticationToken 생성
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(requestDto.getLoginId(), requestDto.getPassword());
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                requestDto.getLoginId(), requestDto.getPassword());
 
         // 2. AuthenticationManager를 통해 인증 시도
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
@@ -251,6 +256,7 @@ public class AuthService {
 
     /**
      * Access Token을 재발급합니다.
+     * 
      * @param refreshToken 재발급 요청에 사용될 Refresh Token
      * @return 새로운 Access Token이 담긴 응답 DTO
      */
@@ -299,7 +305,9 @@ public class AuthService {
     @Transactional(readOnly = true)
     public String checkLoginIdDuplicate(String loginId) {
         userRepository.findByLoginId(loginId)
-                .ifPresent(user -> { throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE); });
+                .ifPresent(user -> {
+                    throw new CustomException(ErrorCode.LOGIN_ID_DUPLICATE);
+                });
         return "사용 가능한 아이디입니다.";
     }
 
@@ -312,25 +320,10 @@ public class AuthService {
     @Transactional(readOnly = true)
     public String checkPhoneNumDuplicate(String phoneNum) {
         userRepository.findByPhoneNum(phoneNum)
-                .ifPresent(user -> { throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE); });
+                .ifPresent(user -> {
+                    throw new CustomException(ErrorCode.PHONE_NUM_DUPLICATE);
+                });
         return "사용 가능한 전화번호입니다.";
     }
 
-    @PostConstruct
-    @Transactional
-    public void initTestUser() {
-        if (userRepository.findByLoginId("testuser1").isEmpty()) {
-            User testUser = User.builder()
-                    .loginId("testuser1")
-                    .password(passwordEncoder.encode("password123!"))
-                    .name("홍길동")
-                    .phoneNum("01011112222")
-                    .birth(LocalDate.of(2001, 3, 24))
-                    .gender(Gender.M)
-                    .investmentTendancy(InvestmentTendancy.안정추구형)
-                    .userMydataRegistration(true) // 새로 추가된 필드
-                    .build();
-            userRepository.save(testUser);
-        }
-    }
 }

@@ -53,7 +53,7 @@ public class SecurityConfig {
             "/v1/api-docs/**",                      // Swagger API Docs (application.yml 설정)
             "/webjars/**",                          // Swagger UI Webjars
             "/error",
-            "/inheritance/view-redirect/**"
+            "/api/v1/inheritance/video-letter/**"
     };
 
     @Bean
