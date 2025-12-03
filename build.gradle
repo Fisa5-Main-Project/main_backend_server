@@ -64,9 +64,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 
     // ------ 분산 추적 (TraceId, SpanId) 관련 의존성 ------
-//    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-//    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-//    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // !________________________로그 서버 못할 시 삭제_____________________!
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 }
 
 jacoco {

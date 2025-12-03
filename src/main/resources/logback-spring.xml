@@ -8,27 +8,22 @@
         <!-- Logstash 서버 주소 (docker-compose.yml에 정의된 서비스 이름) -->
         <destination>localhost:5000</destination>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <!-- 앱 이름을 로그에 추가하여 구분 -->
+            <!-- 기본적으로 포함되는 provider들 -->
+            <stackTrace/>
+            <mdcFieldNames>ActiveUserId,errorCode,errorMessage</mdcFieldNames>
+<!--            <mdc/> &lt;!&ndash; loginId, errorCode 등을 위해 필요 &ndash;&gt;-->
+
+            <!-- Micrometer Tracing 연동을 위한 provider -->
+            <tracing/>
+
+            <!-- 커스텀 필드 (항상 맨 마지막에 위치) -->
             <customFields>{"app_name":"main_backend_server"}</customFields>
         </encoder>
     </appender>
 
-    <!--
-    Spring Profile이 'prod'일 때만 Logstash Appender를 활성화합니다.
-    로컬 개발 중에는 CONSOLE 로깅만 사용하려면 아래 'root' 레벨의 appender-ref에서
-    LOGSTASH를 주석 처리하거나, <springProfile name="local"> 설정을 추가할 수 있습니다.
-    -->
-    <springProfile name="prod">
-        <root level="INFO">
-            <appender-ref ref="LOGSTASH" />
-            <appender-ref ref="CONSOLE" />
-        </root>
-    </springProfile>
-
-    <springProfile name="!prod">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE" />
-        </root>
-    </springProfile>
+    <root level="INFO">
+        <appender-ref ref="LOGSTASH"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
 
 </configuration>

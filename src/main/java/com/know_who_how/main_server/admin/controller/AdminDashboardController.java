@@ -29,7 +29,7 @@ public class AdminDashboardController {
 
     @GetMapping("/dashboard/dau")
     public ResponseEntity<List<UserGrowthResponseDto>> getDauData() {
-        return ResponseEntity.ok(adminDashboardService.getDauData());
+        return ResponseEntity.ok(adminDashboardService.getUserGrowthData());
     }
 
     @GetMapping("/assets/by-type")

@@ -228,7 +228,7 @@ public class AuthService {
         Long userId = user.getUserId().longValue();
 
         // DAU 집계를 위한 로그 추가
-        log.info(append("userId", userId), "USER_LOGIN_SUCCESS");
+        log.info(append("ActiveUserId", userId.toString()), "USER_LOGIN_SUCCESS");
 
         List<String> authorities = user.getAuthorities().stream()
                 .map(grantedAuthority -> grantedAuthority.getAuthority())

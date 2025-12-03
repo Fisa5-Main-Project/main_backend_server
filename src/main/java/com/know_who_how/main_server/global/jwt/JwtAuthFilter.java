@@ -61,7 +61,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                     // MCD에 userId 추가
                     User user = (User) authentication.getPrincipal();
-                    MDC.put("userId", user.getUserId().toString());
+                    MDC.put("ActiveUserId", user.getUserId().toString());
+
+                    log.info("MDC set for user: {}", user.getUserId()); // 임시 로그 추가
 
                 } catch (CustomException e) {
                     request.setAttribute("exception", e.getErrorCode());
@@ -89,7 +91,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         } finally {
             // 요청 처리 완료 후 MCD에서 제거
-            MDC.remove("userId");
+            MDC.remove("ActiveUserId");
             MDC.remove("errorCode");
             MDC.remove("errorMessage");
         }
