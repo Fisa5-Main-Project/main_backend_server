@@ -58,6 +58,7 @@ public class UserService {
                     .balance(new java.math.BigDecimal(request.getRealEstate()))
                     .build());
         }
+
         if (request.getCar() != null) {
             assets.add(Asset.builder()
                     .user(foundUser)
