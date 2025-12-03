@@ -122,7 +122,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // FE 주소 정해지면 추가
-        configuration.setAllowedOrigins(List.of("https://knowwhohow.site","http://localhost:3000", "http://192.168.1.66:3000"));
+        configuration.setAllowedOrigins(List.of("https://knowwhohow.site","http://localhost:3000", "http://localhost:3001"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
