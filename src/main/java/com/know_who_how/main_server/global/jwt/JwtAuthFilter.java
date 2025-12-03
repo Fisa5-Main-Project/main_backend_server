@@ -52,8 +52,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         throw new CustomException(ErrorCode.ALREADY_LOGGED_OUT);
                     }
 
-                    // 토큰 검증
-                    jwtUtil.validateAccessToken(token);
+                // 토큰 검증
+                jwtUtil.validateAccessToken(token);
 
                     // 인증 정보 SecurityContext에 저장
                     Authentication authentication = jwtUtil.getAuthenticationFromAccessToken(token);
