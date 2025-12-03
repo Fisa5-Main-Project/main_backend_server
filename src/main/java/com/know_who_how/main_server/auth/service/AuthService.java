@@ -20,6 +20,7 @@ import com.know_who_how.main_server.user.repository.UserRepository;
 import com.know_who_how.main_server.user.repository.UserTermRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -38,6 +39,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static net.logstash.logback.marker.Markers.append;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -222,6 +226,10 @@ public class AuthService {
         // 3. 인증 성공 시 User 객체에서 정보 추출
         User user = (User) authentication.getPrincipal();
         Long userId = user.getUserId().longValue();
+
+        // DAU 집계를 위한 로그 추가
+        log.info(append("userId", userId), "USER_LOGIN_SUCCESS");
+
         List<String> authorities = user.getAuthorities().stream()
                 .map(grantedAuthority -> grantedAuthority.getAuthority())
                 .collect(Collectors.toList());

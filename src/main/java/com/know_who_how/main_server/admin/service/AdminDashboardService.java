@@ -1,5 +1,12 @@
 package com.know_who_how.main_server.admin.service;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.json.JsonData;
 import com.know_who_how.main_server.admin.dto.*;
 import com.know_who_how.main_server.admin.dto.StatCardResponseDto.ChangeType;
 import com.know_who_how.main_server.global.entity.Asset.Asset;
@@ -8,23 +15,30 @@ import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.user.repository.AssetsRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminDashboardService {
 
     private final UserRepository userRepository;
     private final AssetsRepository assetsRepository;
+    private final ElasticsearchClient elasticsearchClient; // ElasticsearchClient 주입
 
     // 대시보드 상단의 주요 지표 데이터
     public List<StatCardResponseDto> getStatCardsData() {
@@ -35,9 +49,18 @@ public class AdminDashboardService {
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         Long newUsersThisMonth = userRepository.countByCreatedDateAfter(startOfMonth);
 
+        long dau = 0;
+        try {
+            dau = getDauCount();
+        } catch (IOException e) {
+            log.error("Elasticsearch에서 DAU를 가져오는 데 실패했습니다: {}", e.getMessage());
+            // 에러 발생 시 DAU는 0으로 처리하거나 기본값 설정
+            dau = 0;
+        }
+
         return Arrays.asList(
             new StatCardResponseDto("총 가입자 수", BigDecimal.valueOf(totalUsers), 14.2, ChangeType.increase, "vs 지난 달"),
-            new StatCardResponseDto("일일 활성 사용자", new BigDecimal("2100"), 8.3, ChangeType.increase, "vs 지난 달"), // 목업 데이터 유지
+            new StatCardResponseDto("일일 활성 사용자", BigDecimal.valueOf(dau), 8.3, ChangeType.increase, "vs 지난 달"), // 실제 DAU 값으로 교체
             new StatCardResponseDto("신규 가입자 (이번 달)", BigDecimal.valueOf(newUsersThisMonth), 12.1, ChangeType.increase, "vs 지난 달"),
             new StatCardResponseDto("총 자산 규모", totalAsset, 5.7, ChangeType.increase, "vs 지난 달")
         );
@@ -84,6 +107,7 @@ public class AdminDashboardService {
                     List<Asset> assets = entry.getValue();
                     BigDecimal totalValue = assets.stream()
                             .map(Asset::getBalance)
+                            .map(balance -> type == AssetType.LOAN ? balance.abs() : balance) // LOAN인 경우 절대값으로 변환
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                     
                     // 사용자 수로 나누어 평균 계산
@@ -135,6 +159,7 @@ public class AdminDashboardService {
                     List<Asset> assets = entry.getValue();
                     BigDecimal totalAssetForType = assets.stream()
                             .map(Asset::getBalance)
+                            .map(balance -> type == AssetType.LOAN ? balance.abs() : balance) // LOAN인 경우 절대값으로 변환
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                     
                     long userCount = assets.stream().map(Asset::getUser).distinct().count();
@@ -158,5 +183,64 @@ public class AdminDashboardService {
         if (age < 60) return "50대";
         if (age < 70) return "60대"; // 60대 이상 -> 60대
         return "70대 이상"; // 70대 이상 추가
+    }
+
+    private long getDauCount() throws IOException {
+        // DAU 집계 기준: 한국 시간(KST) 기준 오늘 하루 (00:00:00 ~ 23:59:59)
+        ZoneId kstZoneId = ZoneId.of("Asia/Seoul");
+        ZonedDateTime todayStartKst = LocalDate.now(kstZoneId).atStartOfDay(kstZoneId);
+        ZonedDateTime tomorrowStartKst = todayStartKst.plusDays(1);
+
+        // Elasticsearch는 UTC로 시간을 저장하므로, KST를 UTC epoch milliseconds로 변환
+        long startTime = todayStartKst.toInstant().toEpochMilli();
+        long endTime = tomorrowStartKst.toInstant().toEpochMilli();
+
+        // 1. 시간 범위 필터 생성
+        Query timestampRangeQuery = Query.of(q -> q
+                .range(r -> r
+                        .field("@timestamp")
+                        .gte(JsonData.of(startTime))
+                        .lt(JsonData.of(endTime))
+                )
+        );
+
+        // 2. 메시지 키워드 필터 생성
+        Query messageTermQuery = Query.of(q -> q
+                .term(t -> t
+                        .field("message.keyword") // 'message' 대신 'message.keyword' 사용
+                        .value("USER_LOGIN_SUCCESS")
+                )
+        );
+
+        // 3. 필터들을 조합한 Boolean Query 생성
+        Query finalQuery = Query.of(q -> q
+                .bool(b -> b
+                        .filter(timestampRangeQuery)
+                        .filter(messageTermQuery)
+                )
+        );
+
+        // 4. 고유 사용자 수 집계 생성
+        co.elastic.clients.elasticsearch._types.aggregations.Aggregation uniqueUsersAggregation = co.elastic.clients.elasticsearch._types.aggregations.Aggregation.of(a -> a
+                .cardinality(c -> c
+                        .field("userId") // 'userId.keyword' 대신 'userId' 사용
+                )
+        );
+        
+        // 5. SearchRequest 객체 명시적 생성
+        SearchRequest searchRequest = new SearchRequest.Builder()
+                .index("know-who-how-logs-*")
+                .size(0)
+                .query(finalQuery)
+                .aggregations("unique_users", uniqueUsersAggregation)
+                .build();
+
+        SearchResponse<Void> response = elasticsearchClient.search(searchRequest, Void.class);
+
+        Aggregate aggregate = response.aggregations().get("unique_users");
+        if (aggregate != null && aggregate.isCardinality()) {
+            return aggregate.cardinality().value();
+        }
+        return 0;
     }
 }
