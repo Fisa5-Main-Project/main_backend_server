@@ -122,4 +122,11 @@ public class UserController {
         var pensions = userService.getUserPensionAssets(user);
         return ResponseEntity.ok(ApiResponse.onSuccess(pensions));
     }
+
+    @PostMapping("/mydata-registration")
+    @Operation(summary = "마이데이터 연동 완료", description = "사용자의 마이데이터 연동 상태를 '완료'로 변경합니다.")
+    public ResponseEntity<ApiResponse<String>> completeMyDataRegistration(@AuthenticationPrincipal User user) {
+        userService.completeMyDataRegistration(user.getUserId());
+        return ResponseEntity.ok(ApiResponse.onSuccess("마이데이터 연동이 완료되었습니다."));
+    }
 }

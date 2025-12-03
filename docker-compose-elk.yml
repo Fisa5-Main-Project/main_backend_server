@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Elasticsearch 서비스 정의
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  # Kibana 서비스 정의
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # Logstash 서비스 정의
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.14.0
+    container_name: logstash
+    ports:
+      - "5000:5000"
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      # Logstash 파이프라인 설정을 마운트
+      - ./docker/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      # Logstash 자체 설정을 마운트 (옵션, 필요 시 추가)
+      # - ./main_backend_server/docker/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    depends_on:
+      - elasticsearch
+
+volumes:
+  es_data:
+    driver: local

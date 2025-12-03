@@ -81,8 +81,22 @@ INSERT INTO assets (user_id, type, balance, bank_code) VALUES
 (1, 'PENSION', 150000000, NULL),
 (1, 'AUTOMOBILE', 30000000, NULL),
 (1, 'REAL_ESTATE', 800000000, NULL),
-(1, 'LOAN', -300000000, NULL);
+(1, 'LOAN', 300000000, NULL);
 
 -- Dummy Pension Data for user_id = 1 (linked to the PENSION asset above)
 INSERT INTO pension (asset_id, updated_at, pension_type, account_name, principal, personal_contrib, contrib_year, total_personal_contrib) VALUES
 ((SELECT asset_id FROM assets WHERE user_id = 1 AND type = 'PENSION' LIMIT 1), NOW(), 'DC', '우리은행 개인형IRP', 150000000.00, 10000000.00, 2023, 50000000.00);
+
+
+
+INSERT INTO assets (user_id, type, balance, bank_code) VALUES
+  (2, 'CURRENT', 15000000, '004'),
+  (2, 'SAVING', 7839000, '004'),
+  (2, 'INVEST', 1200000, NULL),
+  (2, 'PENSION', 1500000, NULL),
+  (2, 'AUTOMOBILE', 9020000, NULL),
+  (2, 'REAL_ESTATE', 2000000, NULL),
+  (2, 'LOAN', 17200000, NULL);
+
+INSERT INTO pension (asset_id, updated_at, pension_type, account_name, principal, personal_contrib, contrib_year, total_personal_contrib) VALUES
+  ((SELECT asset_id FROM assets WHERE user_id = 2 AND type = 'PENSION' LIMIT 1), NOW(), 'DC', '우리은행 개인형IRP', 150000000.00, 10000000.00, 2023, 50000000.00);

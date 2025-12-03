@@ -332,5 +332,19 @@ public class AuthService {
                     .build();
             userRepository.save(testUser);
         }
+
+        if (userRepository.findByLoginId("testuser2").isEmpty()) {
+            User testUser = User.builder()
+                    .loginId("testuser2")
+                    .password(passwordEncoder.encode("password123!"))
+                    .name("테스터")
+                    .phoneNum("01012345678")
+                    .birth(LocalDate.of(1985, 5, 19))
+                    .gender(Gender.F)
+                    .investmentTendancy(InvestmentTendancy.적극투자형)
+                    .userMydataRegistration(false) // 새로 추가된 필드
+                    .build();
+            userRepository.save(testUser);
+        }
     }
 }
