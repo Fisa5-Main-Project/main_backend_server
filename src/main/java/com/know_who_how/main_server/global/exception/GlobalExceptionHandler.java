@@ -12,7 +12,6 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,19 +23,20 @@ public class GlobalExceptionHandler {
      * @return 400 Bad Request와 첫 번째 유효성 검증 실패 메시지
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException e) {
         BindingResult bindingResult = e.getBindingResult();
         FieldError fieldError = bindingResult.getFieldError();
 
         // 유효성 검증 실패 메시지를 동적으로 생성
-        String errorMessage = (fieldError != null) ? fieldError.getDefaultMessage() : ErrorCode.INVALID_INPUT_VALUE.getMessage();
+        String errorMessage = (fieldError != null) ? fieldError.getDefaultMessage()
+                : ErrorCode.INVALID_INPUT_VALUE.getMessage();
         log.warn("MethodArgumentNotValidException: {}", errorMessage);
 
         ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
         return new ResponseEntity<>(
-            ApiResponse.onFailure(errorCode.getCode(), errorMessage),
-            errorCode.getStatus()
-        );
+                ApiResponse.onFailure(errorCode.getCode(), errorMessage),
+                errorCode.getStatus());
     }
 
     /**
@@ -51,8 +51,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.INVALID_PASSWORD;
         return new ResponseEntity<>(
                 ApiResponse.onFailure(errorCode.getCode(), errorCode.getMessage()),
-                errorCode.getStatus()
-        );
+                errorCode.getStatus());
     }
 
     /**
@@ -71,8 +70,7 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(
                 ApiResponse.onFailure(errorCode.getCode(), message),
-                errorCode.getStatus()
-        );
+                errorCode.getStatus());
     }
 
     /**
@@ -97,8 +95,7 @@ public class GlobalExceptionHandler {
         // HTTP Status도 ErrorCode에서 정의한 것을 사용합니다.
         return new ResponseEntity<>(
                 ApiResponse.onFailure(code, message),
-                status
-        );
+                status);
     }
 
     /**
@@ -118,8 +115,31 @@ public class GlobalExceptionHandler {
         // ApiResponse.onFailure()를 사용하여 실패 응답을 생성합니다.
         return new ResponseEntity<>(
                 ApiResponse.onFailure(errorCode.getCode(), errorCode.getMessage()),
-                errorCode.getStatus()
-        );
+                errorCode.getStatus());
+    }
+
+    /**
+     * Spring Security 인증 과정에서 발생하는 내부 에러를 처리합니다.
+     * CustomUserDetailsService에서 발생시킨 CustomException이 이 예외로 감싸져서 넘어옵니다.
+     *
+     * @param e InternalAuthenticationServiceException
+     * @return CustomException의 내용으로 에러 응답
+     */
+    @ExceptionHandler(org.springframework.security.authentication.InternalAuthenticationServiceException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleInternalAuthenticationServiceException(
+            org.springframework.security.authentication.InternalAuthenticationServiceException e) {
+        // 원인 예외가 CustomException인지 확인
+        if (e.getCause() instanceof CustomException) {
+            CustomException customException = (CustomException) e.getCause();
+            return handleCustomException(customException);
+        }
+
+        // CustomException이 아닌 경우 일반적인 서버 에러로 처리
+        log.error("InternalAuthenticationServiceException: ", e);
+        ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
+        return new ResponseEntity<>(
+                ApiResponse.onFailure(errorCode.getCode(), errorCode.getMessage()),
+                errorCode.getStatus());
     }
 
 }
