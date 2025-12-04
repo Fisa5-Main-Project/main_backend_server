@@ -118,7 +118,23 @@ public class User implements UserDetails {
         this.investmentTendancy = investmentTendancy;
     }
 
+    // [Admin] 이름 업데이트 메서드 추가
+    public void updateName(String name) {
+        this.name = name;
+    }
+
+    // [Admin] 비밀번호 업데이트 메서드 추가
+    public void updatePassword(String password) {
+        this.password = password;
+    }
+
+    // [Admin] 마이데이터 연동 해제 메서드 추가
+    public void disconnectMydata() {
+        this.userMydataRegistration = false;
+    }
+
     // === UserDetails 인터페이스 구현 메서드 ===
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
