@@ -141,3 +141,6 @@ application-**.properties
 
 #ib_*
 data/mysql/
+
+# DataInitializer.java 파일 무시
+DataInitializer.java
