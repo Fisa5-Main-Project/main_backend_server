@@ -9,6 +9,7 @@ import java.util.List;
 @Entity
 @Table(name = "inheritance_videos")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InheritanceVideo {
 
