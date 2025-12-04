@@ -138,3 +138,8 @@ application.yml
 # Settings
 build/
 application-**.properties
+
+#ib_*
+data/mysql/
+
+DataInitializer.java

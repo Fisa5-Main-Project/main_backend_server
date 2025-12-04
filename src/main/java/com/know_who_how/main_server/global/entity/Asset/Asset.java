@@ -19,6 +19,7 @@ public class Asset {
     @Column(name = "asset_id")
     private Long assetId;
 
+    //Cascade 삭제 user_id == null 유발
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

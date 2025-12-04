@@ -49,6 +49,21 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+
+    // ------ S3 관련 의존성 ------
+    implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
+
+    // ------ 이메일 전송 관련 의존성 ------
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'jakarta.mail:jakarta.mail-api:2.1.2'
+
+    testImplementation 'com.h2database:h2'
+    // JUnit 5 Jupiter API (DisplayName 포함)
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+
+    // JUnit 5 테스트 실행 엔진
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
 }
 
 jacoco {
