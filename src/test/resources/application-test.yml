@@ -1,0 +1,118 @@
+server:
+  port: 8061 # 메인 서버(8060)와의 포트 충돌 방지
+  address: 0.0.0.0
+
+spring:
+  # 1. DATASOURCE (H2 인메모리 DB 사용)
+  datasource:
+    # 테스트 종료 시 메모리에서 삭제되는 DB를 사용
+    url: jdbc:h2:mem:testdb;MODE=MySQL;
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # 2. JPA 설정 (테스트 환경에 맞춤)
+  jpa:
+    hibernate:
+      # 테스트마다 테이블을 재생성하고 종료 시 삭제
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+
+  sql:
+    init:
+      mode: never # data.sql 사용을 명시
+      platform: h2 # H2 DB 플랫폼 명시
+      # JPA DDL이 완료된 후에 data.sql을 실행하도록 지연 설정
+      defer-datasource-initialization: true
+
+  # 3. REDIS 설정 (실제 연결 방지)
+  data:
+    redis:
+      # 테스트 환경에서는 MockBean으로 처리되거나 연결 시도 실패를 막기 위한 가짜 호스트/포트
+      host: test-mock-redis
+      port: 6379
+
+  # 4. AWS S3 설정 (Mocking 대비 더미 값)
+  cloud:
+    aws:
+      credentials:
+        # @Value 오류 방지용 더미 값 (유효성 검사는 MockBean에서 처리됨)
+        access-key: test-access-key-for-s3-mock
+        secret-key: test-secret-key-for-s3-mock
+      s3:
+        bucket: test-mock-bucket
+      region:
+        static: ap-northeast-2
+
+  # 5. MAIL 설정 (실제 발송 방지)
+  mail:
+    host: mock-smtp-host # 실제 SMTP 서버에 연결 시도 방지
+    port: 25
+    username: test-sender@mock.com
+    password: test-app-password
+    properties:
+      mail:
+        smtp:
+          auth: false # 테스트 시 인증 불필요
+          starttls:
+            enable: false
+
+  # 6. Spring Security (소셜 로그인 설정은 유지하되 키는 더미로)
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: test-kakao-id
+            client-secret: test-kakao-secret-key
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://localhost:8061/login/oauth2/code/kakao" # 테스트 포트(8061) 반영
+            scope:
+              - profile_nickname
+              - profile_image
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+# 7. 외부 API 및 서비스 키 (NotNull 오류 방지용 더미)
+open-api:
+  base-url: "http://test-apis.data.go.kr"
+  service-key: test-open-api-key
+
+jwt:
+  # NotBlank/NotNull 예외 방지용 긴 더미 키
+  secret: c3ByaW5nLWJvb3QtdGVzdC1hdXRoLWtleS13aWxsLWJlLTQ4LWNoYXJhY3RlcnM=
+  refresh-secret: c3ByaW5nLWJvb3QtcmVmcmVzaC1rZXktd2lsbC1iZS00OC1jaGFyYWN0ZXJzLWZm
+  access-token-validity-in-seconds: 1800
+  refresh-token-validity-in-seconds: 604800
+
+coolsms:
+  api-key: test-coolsms-key
+  api-secret: test-coolsms-secret
+  from-number: 01000000000
+
+# 8. MyData 설정 (Resource/Authorization 서버 주소는 테스트용)
+mydata:
+  client-id: test-knowwhohow
+  client-secret: test-mydata-secret
+  redirect-uri: http://localhost:3000/mydata/callback # 프론트엔드 URL은 유지
+
+  as:
+    authorize-uri: http://localhost:9000/oauth2/authorize
+    token-uri: http://localhost:9000/oauth2/token
+
+  rs:
+    base-url: http://localhost:8081
+
+# 9. App 설정
+app:
+  service-base-url: "http://localhost:8061"
+
+logging:
+  level:
+    org.hibernate.SQL: info
