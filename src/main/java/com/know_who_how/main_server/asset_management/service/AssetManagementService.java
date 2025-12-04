@@ -78,10 +78,13 @@ public class AssetManagementService {
 
                 List<Asset> assetsList = assetsRepository.findByUser(managedUser);
 
-                // 총자산 계산 및 업데이트
-                long totalAsset = assetsList.stream()
+                // 총자산 계산 및 업데이트 (대출 차감)
+                long loanAmount = calculateTotalAssetByType(assetsList, AssetType.LOAN);
+                long sumOfNonLoanAssets = assetsList.stream()
+                                .filter(asset -> asset.getType() != AssetType.LOAN)
                                 .mapToLong(asset -> asset.getBalance().longValue())
                                 .sum();
+                long totalAsset = sumOfNonLoanAssets - loanAmount;
                 managedUser.updateAssetTotal(totalAsset);
                 userRepository.save(managedUser);
 
@@ -214,9 +217,14 @@ public class AssetManagementService {
         }
 
         private PortfolioResponse.GoalMetricsDto calculateGoalMetrics(UserInfo userInfo, List<Asset> assetsList) {
-                long totalAsset = assetsList.stream().mapToLong(asset -> asset.getBalance().longValue()).sum();
-                long totalLoan = calculateTotalAssetByType(assetsList, AssetType.LOAN);
-                long netAsset = totalAsset - totalLoan;
+                long loanAmount = calculateTotalAssetByType(assetsList, AssetType.LOAN);
+                long sumOfNonLoanAssets = assetsList.stream()
+                                .filter(asset -> asset.getType() != AssetType.LOAN)
+                                .mapToLong(asset -> asset.getBalance().longValue())
+                                .sum();
+
+                long totalAsset = sumOfNonLoanAssets - loanAmount;
+                long netAsset = totalAsset; // totalAsset is already net (Assets - Loans)
                 long monthlyExpenditure = userInfo.getExpectationMonthlyCost() + userInfo.getFixedMonthlyCost();
 
                 int goalProgressPercent = (userInfo.getGoalAmount() > 0)
