@@ -1,4 +1,5 @@
 package com.know_who_how.main_server.global.config;
+
 import com.know_who_how.main_server.auth.repository.AuthRepository;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
@@ -18,6 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String loginId) throws UsernameNotFoundException {
         // DB에서 loginId로 사용자 조회
         return authRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_LOGIN_USER));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }
