@@ -57,6 +57,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'jakarta.mail:jakarta.mail-api:2.1.2'
 
+    testImplementation 'com.h2database:h2'
+    // JUnit 5 Jupiter API (DisplayName 포함)
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+
+    // JUnit 5 테스트 실행 엔진
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
     // ------ Logstash 로깅 관련 의존성 ------
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 
