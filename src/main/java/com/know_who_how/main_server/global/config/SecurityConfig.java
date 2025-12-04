@@ -54,7 +54,8 @@ public class SecurityConfig {
                         "/webjars/**", // Swagger UI Webjars
                         "/error",
                         "/api/v1/inheritance/video-letter/**",
-                        "/api/v1/admin/**" // 관리자 페이지
+                        "/api/v1/admin/**", // 관리자 페이지
+                        "/api/v1/auth/mypage/**" // 마이페이지 본인인증 관련 모든 경로
     };
 
         @Bean

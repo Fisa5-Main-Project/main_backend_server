@@ -17,7 +17,7 @@ import java.time.Period;
 public class UserResponseDto {
     private Long id;
     private String name;
-    private String email; // loginId
+    private String loginId; // loginId
     private int age;
     private Long totalAsset;
     private LocalDateTime joinDate; // createdDate
@@ -30,7 +30,7 @@ public class UserResponseDto {
         return UserResponseDto.builder()
                 .id(user.getUserId())
                 .name(user.getName())
-                .email(user.getLoginId())
+                .loginId(user.getLoginId())
                 .age(age)
                 .totalAsset(user.getAssetTotal())
                 .joinDate(user.getCreatedDate())
