@@ -17,6 +17,7 @@ import com.know_who_how.main_server.user.repository.UserInfoRepository;
 import com.know_who_how.main_server.user.repository.UserKeywordRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import com.know_who_how.main_server.user.repository.UserTermRepository;
+import com.know_who_how.main_server.mydata.repository.MydataRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,11 +41,12 @@ public class UserService {
     private final UserTermRepository userTermRepository;
     private final UserInfoRepository userInfoRepository;
     private final PensionRepository pensionRepository;
+    private final MydataRepository mydataRepository;
 
     public UserResponseDto getUserInfo(User user) {
         return UserResponseDto.from(user);
     }
-
+    
     @Transactional
     public void addUserAssets(User user, UserAssetAddRequest request) {
         User foundUser = userRepository.findById(user.getUserId())
@@ -126,6 +128,7 @@ public class UserService {
         assetsRepository.deleteAllByUser(user);
         userInfoRepository.deleteByUser(user);
         refreshTokenRepository.deleteByUser(user);
+        mydataRepository.deleteByUser(user);
 
         // 마지막으로 User 엔티티 삭제
         userRepository.delete(user);

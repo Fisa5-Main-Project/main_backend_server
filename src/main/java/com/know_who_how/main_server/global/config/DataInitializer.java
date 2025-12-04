@@ -45,7 +45,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phoneNum("01011112222")
                     .birth(LocalDate.of(2001, 3, 24))
                     .gender(Gender.M)
-                    .investmentTendancy(InvestmentTendancy.안정추구형)
+                    .investmentTendancy(InvestmentTendancy.적극투자형)
                     .userMydataRegistration(true)
                     .build();
             return userRepository.save(newUser);
