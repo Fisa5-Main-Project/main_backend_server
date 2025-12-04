@@ -141,3 +141,5 @@ application-**.properties
 
 #ib_*
 data/mysql/
+
+DataInitializer.java
