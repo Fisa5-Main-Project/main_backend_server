@@ -299,13 +299,13 @@ public class AuthController {
                     - SMS 발송 자체에 실패한 경우 `500 Internal Server Error` (AUTH_012)
                     """)
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 문자 발송 성공", content = @Content(schema = @Schema(implementation = TestSmsResponseDto.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 문자 발송 성공", content = @Content(schema = @Schema(implementation = SendSmsResponseDto.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 유효성 검사 실패)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 내부 오류 (SMS 전송 실패 등)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/mypage/send-code")
-    public ApiResponse<TestSmsResponseDto> sendSmsCertificationForMypage(@Valid @RequestBody MypageSmsSendRequestDto requestDto) {
-        TestSmsResponseDto responseDto = smsCertificationService.sendSmsCertificationForMypage(requestDto);
+    public ApiResponse<SendSmsResponseDto> sendSmsCertificationForMypage(@Valid @RequestBody MypageSmsSendRequestDto requestDto) {
+        SendSmsResponseDto responseDto = smsCertificationService.sendSmsCertificationForMypage(requestDto);
         return ApiResponse.onSuccess(responseDto);
     }
 

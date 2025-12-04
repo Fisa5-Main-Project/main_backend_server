@@ -34,7 +34,7 @@ public class UserResponseDto {
                 .age(age)
                 .totalAsset(user.getAssetTotal())
                 .joinDate(user.getCreatedDate())
-                .lastActive(LocalDateTime.now().minusDays((long)(Math.random() * 30))) // 임시 목업 데이터
+                .lastActive(null) // TODO: 실제 사용자 마지막 활동 시간을 추적하는 로직 구현 필요
                 .status(user.isEnabled() ? "active" : "inactive")
                 .build();
     }

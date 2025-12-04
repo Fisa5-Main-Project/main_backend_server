@@ -53,11 +53,12 @@ public class AdminDashboardService {
         // DAU 계산 후 값 확인용 로그
         log.info("DAU Count from getDauCount(): {}", dau);
 
+        // TODO: 증감율 계산 로직 구현 필요 (예: 지난 달 데이터와 비교)
         return Arrays.asList(
-            new StatCardResponseDto("총 가입자 수", BigDecimal.valueOf(totalUsers), 14.2, ChangeType.increase, "vs 지난 달"),
-            new StatCardResponseDto("일일 활성 사용자", BigDecimal.valueOf(dau), 8.3, ChangeType.increase, "vs 지난 달"),
-            new StatCardResponseDto("신규 가입자 (이번 달)", BigDecimal.valueOf(newUsersThisMonth), 12.1, ChangeType.increase, "vs 지난 달"),
-            new StatCardResponseDto("총 자산 규모", totalAsset, 5.7, ChangeType.increase, "vs 지난 달")
+            new StatCardResponseDto("총 가입자 수", BigDecimal.valueOf(totalUsers), 0.0, ChangeType.increase, "vs 지난 달"), // TODO: 실제 증감율 계산 로직으로 교체
+            new StatCardResponseDto("일일 활성 사용자", BigDecimal.valueOf(dau), 0.0, ChangeType.increase, "vs 지난 달"), // TODO: 실제 증감율 계산 로직으로 교체
+            new StatCardResponseDto("신규 가입자 (이번 달)", BigDecimal.valueOf(newUsersThisMonth), 0.0, ChangeType.increase, "vs 지난 달"), // TODO: 실제 증감율 계산 로직으로 교체
+            new StatCardResponseDto("총 자산 규모", totalAsset, 0.0, ChangeType.increase, "vs 지난 달") // TODO: 실제 증감율 계산 로직으로 교체
         );
     }
 
@@ -212,7 +213,7 @@ public class AdminDashboardService {
         SearchResponse<Void> response = elasticsearchClient.search(searchRequest, Void.class);
 
         // Elasticsearch 쿼리 결과 원본 확인용 로그
-        log.info("Elasticsearch Raw Response: {}", response.toString());
+        log.trace("Elasticsearch Raw Response: {}", response.toString());
 
         Aggregate aggregate = response.aggregations().get("unique_users");
         if (aggregate != null && aggregate.isCardinality()) {

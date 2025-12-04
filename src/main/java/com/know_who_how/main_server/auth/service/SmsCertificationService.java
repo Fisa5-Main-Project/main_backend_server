@@ -2,10 +2,7 @@ package com.know_who_how.main_server.auth.service;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.know_who_how.main_server.auth.dto.MypageSmsSendRequestDto;
-import com.know_who_how.main_server.auth.dto.SmsCertificationConfirmDto;
-import com.know_who_how.main_server.auth.dto.SmsCertificationRequestDto;
-import com.know_who_how.main_server.auth.dto.TestSmsResponseDto;
+import com.know_who_how.main_server.auth.dto.*;
 import com.know_who_how.main_server.global.config.CoolSmsProperties;
 import com.know_who_how.main_server.global.util.RedisUtil; // New import
 import com.know_who_how.main_server.global.exception.CustomException;
@@ -150,9 +147,11 @@ public class SmsCertificationService {
      * @param requestDto SMS 인증 요청 DTO (이름, 전화번호)
      * @return verificationId
      */
-    public TestSmsResponseDto sendSmsCertificationForMypage(MypageSmsSendRequestDto requestDto) {
+    public SendSmsResponseDto sendSmsCertificationForMypage(MypageSmsSendRequestDto requestDto) {
         String verificationId = UUID.randomUUID().toString();
-        String certificationCode = createCertificationCode();
+        // 개발 환경에서는 고정된 인증 코드를 사용하고 실제 SMS 발송을 비활성화합니다.
+        // 배포 시 createCertificationCode()를 사용하고 messageService.send(message)를 활성화해야 합니다.
+        String certificationCode = "123456"; //createCertificationCode();
         Message message = new Message();
         message.setFrom(coolSmsProperties.getFromNumber());
         message.setTo(requestDto.getPhoneNum());
@@ -172,9 +171,9 @@ public class SmsCertificationService {
             SmsVerificationData data = new SmsVerificationData(certificationCode, smsRequestForRedis, false);
             redisUtil.save(verificationId, data, EXPIRATION_TIME);
 
-            // verificationId와 authCode를 함께 반환
-            log.info("마이페이지 인증용 SMS 정보 생성 완료. verificationId: {}, authCode: {}", verificationId, certificationCode);
-            return new TestSmsResponseDto(verificationId, certificationCode);
+            // verificationId만 반환 (보안 취약점 수정)
+            log.info("마이페이지 인증용 SMS 정보 생성 완료. verificationId: {}", verificationId);
+            return new SendSmsResponseDto(verificationId);
         } catch (Exception e) {
             log.error("SMS 인증 처리 중 알 수 없는 오류 발생", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
