@@ -81,7 +81,7 @@ public class MydataService {
             throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
         }
         String accessToken = tokenObj.toString();
-
+        log.info("access token 정보: {}", accessToken);
         if (accessToken.isBlank()) {
             log.info("Access Token이 만료되었습니다. Refresh Token으로 갱신을 시도하세요.");
             throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
