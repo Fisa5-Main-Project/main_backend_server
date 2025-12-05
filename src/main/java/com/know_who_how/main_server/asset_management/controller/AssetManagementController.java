@@ -4,6 +4,8 @@ import com.know_who_how.main_server.asset_management.dto.*;
 import com.know_who_how.main_server.asset_management.service.AssetManagementService;
 import com.know_who_how.main_server.global.dto.ApiResponse;
 import com.know_who_how.main_server.global.entity.User.User;
+import com.know_who_how.main_server.global.exception.CustomException;
+import com.know_who_how.main_server.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -52,8 +54,15 @@ public class AssetManagementController {
         """)
     public ResponseEntity<ApiResponse<PortfolioResponse>> getPortfolio(
             @AuthenticationPrincipal User user) {
-        PortfolioResponse portfolio = assetManagementService.getPortfolio(user);
-        return ResponseEntity.ok(ApiResponse.onSuccess(portfolio));
+        try {
+            PortfolioResponse portfolio = assetManagementService.getPortfolio(user);
+            return ResponseEntity.ok(ApiResponse.onSuccess(portfolio));
+        } catch (CustomException e) {
+            if (e.getErrorCode() == ErrorCode.USER_INFO_NOT_FOUND) {
+                return ResponseEntity.ok(ApiResponse.onFailure(e.getErrorCode().getCode(), e.getErrorCode().getMessage()));
+            }
+            throw e;
+        }
     }
 
     @PostMapping("/simulate/saving")
