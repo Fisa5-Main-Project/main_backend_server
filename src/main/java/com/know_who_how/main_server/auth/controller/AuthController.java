@@ -291,4 +291,51 @@ public class AuthController {
                 TestSmsResponseDto testData = smsCertificationService.sendTestSmsCertification(requestDto);
                 return ApiResponse.onSuccess(testData);
         }
+
+        @Operation(summary = "2-1. 마이페이지 프로필 수정 본인인증 문자 발송",
+                description = """
+                    **사용 시점:** 프로필 수정 전 본인 확인을 위해 사용합니다.
+                    
+                    **성공:** `verificationId`가 담긴 응답을 반환합니다.
+                    
+                    **실패:**
+                    - 요청 DTO의 필드 유효성 검사 실패 시 `400 Bad Request`
+                    - SMS 발송 자체에 실패한 경우 `500 Internal Server Error` (AUTH_012)
+                    """)
+        @ApiResponses({
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 문자 발송 성공", content = @Content(schema = @Schema(implementation = TestSmsResponseDto.class))),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 유효성 검사 실패)", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 내부 오류 (SMS 전송 실패 등)", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        })
+        @PostMapping("/mypage/send-code")
+        public ApiResponse<TestSmsResponseDto> sendSmsCertificationForMypage(@Valid @RequestBody MypageSmsSendRequestDto requestDto) {
+                TestSmsResponseDto responseDto = smsCertificationService.sendSmsCertificationForMypage(requestDto);
+                return ApiResponse.onSuccess(responseDto);
+        }
+
+        @Operation(summary = "2-2. 마이페이지 프로필 수정 SMS 인증번호 확인",
+                description = """
+                    **사용 시점:** 프로필 수정 본인 확인 문자 발송 후, 사용자가 입력한 인증번호를 검증할 때 사용합니다.
+                    
+                    **성공:** "인증이 완료되었습니다." 메시지를 반환합니다.
+                    
+                    **실패:**
+                    - 인증번호가 틀린 경우 `400 Bad Request` (AUTH_007)
+                    - 인증 시간이 만료된 경우 `400 Bad Request` (AUTH_008)
+                    - 인증 요청 ID가 존재하지 않는 경우 `400 Bad Request` (AUTH_009)
+                    """)
+        @ApiResponses({
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 성공"),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = """
+                    - 유효하지 않은 인증 코드 (AUTH_007)
+                    - 인증 코드 만료 (AUTH_008)
+                    - 인증 코드를 찾을 수 없음 (AUTH_009)
+                    """, content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        })
+        @PostMapping("/mypage/check-code")
+        public ApiResponse<String> confirmSmsCertificationForMypage(@Valid @RequestBody SmsCertificationConfirmDto confirmDto) {
+                String message = smsCertificationService.confirmSmsCertificationForMypage(confirmDto);
+                return ApiResponse.onSuccess(message);
+        }
+
 }
