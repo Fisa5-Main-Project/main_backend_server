@@ -122,7 +122,6 @@ public class JwtUtil {
             log.error("JWT 서명 검증 실패", e);
             throw new CustomException(ErrorCode.INVALID_TOKEN_SIGNATURE);
         } catch (MalformedJwtException e) {
-            log.error("JWT 형식 오류", e);
             throw new CustomException(ErrorCode.MALFORMED_TOKEN_ERROR);
         } catch (ExpiredJwtException e) {
             log.error("JWT 만료", e);

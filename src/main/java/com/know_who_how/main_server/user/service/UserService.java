@@ -8,6 +8,7 @@ import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
+import com.know_who_how.main_server.mydata.repository.MydataRepository;
 import com.know_who_how.main_server.user.dto.*;
 import com.know_who_how.main_server.user.repository.AssetsRepository;
 import com.know_who_how.main_server.user.repository.KeywordRepository;
@@ -40,6 +41,7 @@ public class UserService {
     private final UserTermRepository userTermRepository;
     private final UserInfoRepository userInfoRepository;
     private final PensionRepository pensionRepository;
+    private final MydataRepository mydataRepository;
 
     public UserResponseDto getUserInfo(User user) {
         return UserResponseDto.from(user);
@@ -126,7 +128,7 @@ public class UserService {
         assetsRepository.deleteAllByUser(user);
         userInfoRepository.deleteByUser(user);
         refreshTokenRepository.deleteByUser(user);
-
+        mydataRepository.deleteByUser(user);
         // 마지막으로 User 엔티티 삭제
         userRepository.delete(user);
     }

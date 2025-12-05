@@ -22,4 +22,10 @@ public interface MydataRepository extends JpaRepository<Mydata, Long> {
      * (엔티티 로딩 없이 존재 여부만 체크)
      */
     boolean existsByUser(User user);
+
+
+    /**
+     * 주어진 사용자에 매핑된 Mydata 엔티티를 삭제
+     */
+    void deleteByUser(User user);
 }
