@@ -1,5 +1,6 @@
 package com.know_who_how.main_server.user.repository;
 
+import com.know_who_how.main_server.global.entity.Keyword.Keyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeyword;
 import com.know_who_how.main_server.global.entity.Keyword.UserKeywordId;
 import com.know_who_how.main_server.global.entity.User.User;
@@ -10,4 +11,6 @@ import java.util.List;
 public interface UserKeywordRepository extends JpaRepository<UserKeyword, UserKeywordId> {
     List<UserKeyword> findByUser(User user);
     void deleteAllByUser(User user);
+
+    boolean existsByUserAndKeyword(User user, Keyword keyword);
 }

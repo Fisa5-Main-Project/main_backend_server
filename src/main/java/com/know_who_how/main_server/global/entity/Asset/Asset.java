@@ -34,4 +34,7 @@ public class Asset {
 
     @Column(name = "bank_code", nullable = true)
     private String bankCode;
+
+    @OneToOne(mappedBy = "asset", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private com.know_who_how.main_server.global.entity.Asset.Pension.Pension pension;
 }
