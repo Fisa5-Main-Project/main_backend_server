@@ -282,17 +282,22 @@ public class AuthService {
             throw new CustomException(ErrorCode.TOKEN_EXPIRED);
         }
 
-        // 5. 사용자 정보 조회 및 새로운 Access Token 생성
+        // 5. 새로운 Access Token과 Refresh Token 생성 (RTR 적용)
         List<String> authorities = user.getAuthorities().stream()
                 .map(grantedAuthority -> grantedAuthority.getAuthority())
                 .collect(Collectors.toList());
         String newAccessToken = jwtUtil.createAccessToken(userId, authorities);
+        String newRefreshToken = jwtUtil.createRefreshToken(userId);
 
-        // 6. 새로운 Access Token만 담아서 반환 (Refresh Token은 유지)
+        // 6. DB에 새로운 Refresh Token 정보로 업데이트
+        storedRefreshToken.updateToken(newRefreshToken, jwtUtil.extractExpiration(newRefreshToken, true).toInstant());
+        refreshTokenRepository.save(storedRefreshToken);
+
+        // 7. 새로운 토큰들을 담아서 반환
         return TokenResponseDto.builder()
                 .grantType("Bearer")
                 .accessToken(newAccessToken)
-                .refreshToken(refreshToken) // 기존 Refresh Token을 그대로 반환
+                .refreshToken(newRefreshToken) // 새로 생성된 Refresh Token 반환
                 .build();
     }
 

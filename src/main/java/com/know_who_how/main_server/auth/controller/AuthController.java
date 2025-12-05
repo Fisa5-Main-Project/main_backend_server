@@ -251,8 +251,12 @@ public class AuthController {
         })
         @PostMapping("/reissue")
         public ApiResponse<AccessTokenResponseDto> reissue(
-                        @CookieValue(name = "refresh_token") String refreshToken) {
+                        @CookieValue(name = "refresh_token") String refreshToken,
+                        HttpServletResponse response) {
                 TokenResponseDto tokenResponseDto = authService.reissue(refreshToken);
+
+                // 새로운 Refresh Token을 HttpOnly 쿠키에 설정
+                cookieUtil.setRefreshTokenCookie(response, tokenResponseDto.getRefreshToken());
 
                 // Access Token 정보만 DTO에 담아 Body로 반환
                 AccessTokenResponseDto accessTokenResponse = AccessTokenResponseDto.builder()
