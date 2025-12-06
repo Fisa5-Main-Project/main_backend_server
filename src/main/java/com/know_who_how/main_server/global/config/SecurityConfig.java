@@ -124,7 +124,7 @@ public class SecurityConfig {
 
                 // FE 주소 정해지면 추가
                 configuration.setAllowedOrigins(
-                                List.of("https://knowwhohow.site", "http://localhost:3000", "http://localhost:3001"));
+                                List.of("https://knowwhohow.site", "http://localhost:3000", "http://localhost:3001", "https://fisa-main-project.vercel.app" ));
 
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
