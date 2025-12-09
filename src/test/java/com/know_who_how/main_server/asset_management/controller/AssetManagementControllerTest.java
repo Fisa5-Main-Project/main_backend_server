@@ -127,4 +127,108 @@ class AssetManagementControllerTest {
 
                 then(assetManagementService).should().getPortfolio(any(User.class));
         }
+
+        /**
+         * 기능 ID: ASSET-03
+         * 테스트 시나리오: 적금 시뮬레이션 - 성공
+         * 테스트 조건: 유효한 월 납입액과 기간으로 POST /api/v1/asset-management/simulate/saving 요청
+         * 예상 결과:
+         * - 200 OK 상태 코드 반환
+         * - 적금 시뮬레이션 결과 (원금, 이자, 만기금액) 반환
+         */
+        @Test
+        @DisplayName("[성공] 적금 시뮬레이션 - 유효한 요청")
+        void simulateInstallmentSaving_should_returnSimulationResult_when_requestIsValid() throws Exception {
+                // given
+                com.know_who_how.main_server.asset_management.dto.SimulationRequest request = new com.know_who_how.main_server.asset_management.dto.SimulationRequest(
+                                500000L, 12);
+                String requestBody = objectMapper.writeValueAsString(request);
+
+                com.know_who_how.main_server.asset_management.dto.SimulationResponse mockResponse = new com.know_who_how.main_server.asset_management.dto.SimulationResponse(
+                                "적금 시뮬레이션", 6000000L, 12, 6150000L, 150000L);
+
+                given(assetManagementService.runInstallmentSavingSimulation(
+                                any(com.know_who_how.main_server.asset_management.dto.SimulationRequest.class)))
+                                .willReturn(mockResponse);
+
+                // when & then
+                mockMvc.perform(post("/api/v1/asset-management/simulate/saving")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.isSuccess").value(true))
+                                .andExpect(jsonPath("$.data.predictionType").value("적금 시뮬레이션"))
+                                .andExpect(jsonPath("$.data.principal").value(6000000L))
+                                .andExpect(jsonPath("$.data.expectedAmount").value(6150000L));
+
+                then(assetManagementService).should().runInstallmentSavingSimulation(
+                                any(com.know_who_how.main_server.asset_management.dto.SimulationRequest.class));
+        }
+
+        /**
+         * 기능 ID: ASSET-04
+         * 테스트 시나리오: 예금 시뮬레이션 - 성공
+         * 테스트 조건: 유효한 예치 원금과 기간으로 POST /api/v1/asset-management/simulate/deposit 요청
+         * 예상 결과:
+         * - 200 OK 상태 코드 반환
+         * - 예금 시뮬레이션 결과 (원금, 이자, 만기금액) 반환
+         */
+        @Test
+        @DisplayName("[성공] 예금 시뮬레이션 - 유효한 요청")
+        void simulateDeposit_should_returnSimulationResult_when_requestIsValid() throws Exception {
+                // given
+                com.know_who_how.main_server.asset_management.dto.SimulationRequest request = new com.know_who_how.main_server.asset_management.dto.SimulationRequest(
+                                10000000L, 12);
+                String requestBody = objectMapper.writeValueAsString(request);
+
+                com.know_who_how.main_server.asset_management.dto.SimulationResponse mockResponse = new com.know_who_how.main_server.asset_management.dto.SimulationResponse(
+                                "예금 시뮬레이션", 10000000L, 12, 10250000L, 250000L);
+
+                given(assetManagementService.runDepositSimulation(
+                                any(com.know_who_how.main_server.asset_management.dto.SimulationRequest.class)))
+                                .willReturn(mockResponse);
+
+                // when & then
+                mockMvc.perform(post("/api/v1/asset-management/simulate/deposit")
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.isSuccess").value(true))
+                                .andExpect(jsonPath("$.data.predictionType").value("예금 시뮬레이션"))
+                                .andExpect(jsonPath("$.data.principal").value(10000000L))
+                                .andExpect(jsonPath("$.data.expectedAmount").value(10250000L));
+
+                then(assetManagementService).should().runDepositSimulation(
+                                any(com.know_who_how.main_server.asset_management.dto.SimulationRequest.class));
+        }
+
+        /**
+         * 기능 ID: ASSET-05
+         * 테스트 시나리오: 금융 상품 상세 조회 - 성공
+         * 테스트 조건: 존재하는 상품명으로 GET /api/v1/asset-management/products/{productName} 요청
+         * 예상 결과:
+         * - 200 OK 상태 코드 반환
+         * - 상품 상세 정보 반환
+         */
+        @Test
+        @DisplayName("[성공] 금융 상품 상세 조회 - 존재하는 상품")
+        void getProductDetails_should_returnProductDetails_when_productExists() throws Exception {
+                // given
+                String productName = "우리 SUPER주거래 적금";
+                com.know_who_how.main_server.asset_management.dto.FinancialProductResponse mockResponse = org.mockito.Mockito
+                                .mock(com.know_who_how.main_server.asset_management.dto.FinancialProductResponse.class);
+
+                given(assetManagementService.getProductDetails(productName)).willReturn(mockResponse);
+
+                // when & then
+                mockMvc.perform(get("/api/v1/asset-management/products/" + productName)
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.isSuccess").value(true));
+
+                then(assetManagementService).should().getProductDetails(productName);
+        }
 }
