@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -105,7 +104,8 @@ public class UserService {
 
     @Transactional
     public void updateUserKeywords(User user, UserKeywordsUpdateRequestDto requestDto) {
-        User foundUser = userRepository.findById(user.getUserId()).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        User foundUser = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         userKeywordRepository.deleteAllByUser(foundUser);
         List<Keyword> keywords = keywordRepository.findAllById(requestDto.getKeywordIds());
         if (keywords.size() != requestDto.getKeywordIds().size()) {
@@ -135,7 +135,8 @@ public class UserService {
 
     public List<PensionAssetDto> getUserPensionAssets(User user) {
         var managedUser = resolveUser(user);
-        List<com.know_who_how.main_server.global.entity.Asset.Asset> pensionAssets = assetsRepository.findByUser(managedUser)
+        List<com.know_who_how.main_server.global.entity.Asset.Asset> pensionAssets = assetsRepository
+                .findByUser(managedUser)
                 .stream()
                 .filter(asset -> asset.getType() == AssetType.PENSION)
                 .collect(Collectors.toList());
@@ -144,9 +145,11 @@ public class UserService {
                 .map(com.know_who_how.main_server.global.entity.Asset.Asset::getAssetId)
                 .collect(Collectors.toList());
 
-        Map<Long, com.know_who_how.main_server.global.entity.Asset.Pension.Pension> pensionsById = pensionRepository.findAllById(pensionAssetIds)
+        Map<Long, com.know_who_how.main_server.global.entity.Asset.Pension.Pension> pensionsById = pensionRepository
+                .findAllById(pensionAssetIds)
                 .stream()
-                .collect(Collectors.toMap(com.know_who_how.main_server.global.entity.Asset.Pension.Pension::getAssetId, p -> p));
+                .collect(Collectors.toMap(com.know_who_how.main_server.global.entity.Asset.Pension.Pension::getAssetId,
+                        p -> p));
 
         return pensionAssets.stream()
                 .map(asset -> PensionAssetDto.from(asset, pensionsById.get(asset.getAssetId())))
@@ -160,6 +163,7 @@ public class UserService {
         return userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
+
     @Transactional
     public void completeMyDataRegistration(Long userId) {
         User user = userRepository.findById(userId)
