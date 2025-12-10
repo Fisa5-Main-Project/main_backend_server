@@ -3,9 +3,13 @@ package com.know_who_how.main_server.auth.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class SmsCertificationConfirmDto {
     @Schema(description = "SMS 인증 요청 시 받은 ID", example = "c78a8a1d-2c4f-4f3a-b5f7-5a9a8e3a4b2f")
     @NotBlank(message = "인증 ID는 필수 입력 항목입니다.")
