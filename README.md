@@ -182,28 +182,7 @@ src
   - SMTP
 
 
-    
 
-### 로컬 실행
-
-Windows:
-
-```shell
-gradlew.bat bootRun --args="--spring.profiles.active=local"
-```
-
-macOS/Linux:
-
-```shell
-./gradlew bootRun --args='--spring.profiles.active=local'
-```
-
-빌드한 JAR 실행:
-
-```shell
-./gradlew clean build
-java -jar build/libs/main-server-0.0.1-SNAPSHOT.jar --spring.profiles.active=local
-```
 
 ## API 문서
 
@@ -268,21 +247,7 @@ docker build -f docker/Dockerfile -t knowwhohow-main .
 docker compose up -d
 ```
 
-> 현재 Compose 파일은 MySQL 컨테이너를 생성하지 않으며, 저장소에도 `nginx/conf`가 포함되어 있지 않습니다. 배포 환경에서 DB 연결 정보와 Nginx 설정을 별도로 주입해야 합니다.
 
-## 데이터 모델 개요
 
-- `users`를 중심으로 `user_info`, `assets`, `pension`, `my_data`, `refresh_token`이 사용자 정보를 구성합니다.
-- `keyword`와 `term`은 각각 연결 엔티티를 통해 사용자와 다대다 관계를 표현합니다.
-- `inheritance`는 사용자별 상속 계획이며 `inheritance_videos`, `inheritance_recipients`와 연결됩니다.
-- `financial_product`는 예금·적금 상품과 구간별 금리 계산에 필요한 정보를 보관합니다.
 
-## 운영 시 확인 사항
-
-- `ddl-auto`는 운영 DB 마이그레이션 정책에 맞게 설정하고, 가능하면 Flyway/Liquibase 도입을 권장합니다.
-- MyData OAuth2 `state` 검증을 구현해야 합니다.
-- S3 버킷은 공개하지 않고 Presigned URL과 최소 권한 IAM 정책을 사용해야 합니다.
-- JWT, DB, Redis, AWS, SMTP 및 외부 API Secret은 설정 파일에 커밋하지 말고 Secret Manager나 환경변수로 주입해야 합니다.
-- 예약 작업은 인스턴스마다 실행됩니다. 서버를 여러 대 운영한다면 중복 발송 방지를 위한 분산 락이 필요합니다.
-- 애플리케이션 로그에 Authorization Code, Token, 개인정보가 기록되지 않도록 운영 로깅 정책을 점검해야 합니다.
 
