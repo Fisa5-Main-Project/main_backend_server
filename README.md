@@ -25,13 +25,14 @@
 - Spring Data JPA
 - Spring Security
 - Spring WebFlux `WebClient`
+- Resilience4j: MyData 외부 서버 장애 격리와 동시 호출 제한
 - Gradle
 - Lombok
 
 ### Data & Infrastructure
 
 - MySQL: 서비스 영속 데이터
-- Redis: 인증 코드, 임시 OAuth 정보, MyData Access Token, 채용 API 캐시
+- Redis: 인증 코드, 임시 OAuth 정보, MyData Access Token·최초 조회 중복 방지 락, 채용 API 캐시
 - AWS S3: 영상 편지 저장 및 Presigned URL 기반 멀티파트 업로드
 - SMTP: 예약 영상 편지 링크 발송
 - CoolSMS(Solapi): 휴대폰 본인 인증
@@ -127,7 +128,11 @@ Authorization: Bearer <access-token>
 2. 사용자가 동의하면 Callback의 Authorization Code를 토큰으로 교환합니다.
 3. 짧게 유지되는 Access Token은 TTL과 함께 Redis에 저장합니다.
 4. Refresh Token과 Scope는 MySQL의 `my_data` 테이블에 저장합니다.
-5. 자산 조회 시 Access Token이 없거나 만료되었다면 Refresh Token으로 갱신한 뒤 Resource Server를 호출합니다.
+5. 연동 완료 후 초기 동기화 Job(작업)을 생성하고, 백그라운드 Worker(작업 실행기)가 Resource Server에서 자산 정보를 가져옵니다.
+6. 자산 조회 시에는 Snapshot(마지막 정상 응답 복사본)을 즉시 반환하고, 오래된 Snapshot은 백그라운드에서 갱신합니다.
+7. Snapshot이 없는 최초 조회만 짧게 Resource Server를 호출하며, Redis 락(중복 실행 잠금)으로 동일 사용자의 중복 호출을 방지합니다.
+
+Resource Server에 장애가 발생해도 Snapshot이 있으면 마지막 성공 데이터를 반환합니다. Snapshot이 없으면 기존 `MYDATA_SERVER_ERROR`를 반환하며, Refresh Token까지 만료된 경우에는 재연동이 필요합니다. Snapshot payload는 현재 암호화하지 않은 JSON으로 저장되므로 운영 DB 접근 권한과 보관·삭제 정책을 별도로 관리해야 합니다.
 
 
 ### 채용 정보
@@ -181,6 +186,15 @@ src
   - AWS S3
   - SMTP
 
+### 데이터베이스 마이그레이션
+
+애플리케이션 배포 전에 다음 SQL을 순서대로 MySQL에 적용해야 합니다. 현재 프로젝트는 마이그레이션을 자동 실행하지 않습니다.
+
+```text
+1. docker/migrations/20260822_add_asset_source.sql
+2. docker/migrations/20260822_create_mydata_sync_tables.sql
+```
+
 
 
 
@@ -225,7 +239,7 @@ src
 build/reports/jacoco/test/html/index.html
 ```
 
-테스트는 `application-test.yml`과 H2의 MySQL 호환 모드를 사용합니다. 외부 인프라에 의존하는 객체는 테스트별 Mock 구성이 필요합니다.
+테스트는 `application-test.yml`과 H2의 MySQL 호환 모드를 사용합니다. 외부 인프라에 의존하는 객체는 테스트별 Mock 구성이 필요합니다. MyData Repository와 마이그레이션에는 MySQL 전용 문법이 있으므로 배포 전 실제 MySQL과 Redis를 사용하는 통합 테스트가 필요합니다.
 
 ## Docker
 

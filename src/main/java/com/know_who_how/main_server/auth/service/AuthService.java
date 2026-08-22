@@ -275,7 +275,10 @@ public class AuthService {
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
 
         if (!storedRefreshToken.getTokenValue().equals(refreshToken)) {
-            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+            // 유효한 JWT지만 저장된 값과 다름 → 이미 사용된 RT 재사용 시도 감지
+            // 토큰 탈취 가능성이 있으므로 저장된 RT를 삭제해 강제 로그아웃 처리
+            refreshTokenRepository.delete(storedRefreshToken);
+            throw new CustomException(ErrorCode.REFRESH_TOKEN_REUSE_DETECTED);
         }
         // 4. Refresh Token의 만료 여부 확인 (RDB에 저장된 expiryDate 사용)
         if (storedRefreshToken.getExpiryDate().isBefore(Instant.now())) {

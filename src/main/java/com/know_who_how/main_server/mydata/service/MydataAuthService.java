@@ -33,10 +33,11 @@ public class MydataAuthService {
 
     private final MydataProperties mydataProperties;
     private final MydataRepository mydataRepository;
-    private final WebClient mydataAuthWebClient;
+    private final WebClient mydataWebClient;
     private final UserRepository userRepository;
 
     private final RedisUtil redisUtil;
+    private final MydataSyncJobService syncJobService;
 
     /**
      * 1) 연동 시작 시, AS의 authorize URL을 만들어 반환한다.
@@ -84,6 +85,8 @@ public class MydataAuthService {
 
         // Token 저장
         processTokenResponse(userId, tokenResponse);
+        // DB 트랜잭션이 커밋된 뒤 Scheduler가 최초 동기화를 처리한다.
+        syncJobService.enqueueIfAbsent(userId);
     }
 
     /**
@@ -200,7 +203,7 @@ public class MydataAuthService {
         String tokenUri = mydataProperties.getAs().getTokenUri();
 
         try {
-            return mydataAuthWebClient.post()
+            return mydataWebClient.post()
                     .uri(tokenUri)
                     .headers(headers -> headers.setBasicAuth(
                             mydataProperties.getClientId(),

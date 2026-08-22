@@ -75,14 +75,14 @@ INSERT INTO keyword (name) SELECT '편안한 휴식' WHERE NOT EXISTS (SELECT 1 
 
 -- Dummy Asset Data for user_id = 1 (testuser1)
 -- user_id 1은 AuthService.initTestUser()에서 생성됩니다.
--- INSERT INTO assets (user_id, type, balance, bank_code) VALUES
--- (1, 'CURRENT', 5000000, '002'),
--- (1, 'SAVING', 1200000, '002'),
--- (1, 'INVEST', 25000000, '240'),
--- (1, 'PENSION', 150000000, '001'),
--- (1, 'AUTOMOBILE', 30000000, NULL),
--- (1, 'REAL_ESTATE', 800000000, NULL),
--- (1, 'LOAN', 300000000, '011');
+-- INSERT INTO assets (user_id, type, source, balance, bank_code) VALUES
+-- (1, 'CURRENT', 'MYDATA', 5000000, '002'),
+-- (1, 'SAVING', 'MYDATA', 1200000, '002'),
+-- (1, 'INVEST', 'MYDATA', 25000000, '240'),
+-- (1, 'PENSION', 'MYDATA', 150000000, '001'),
+-- (1, 'AUTOMOBILE', 'MANUAL', 30000000, NULL),
+-- (1, 'REAL_ESTATE', 'MANUAL', 800000000, NULL),
+-- (1, 'LOAN', 'MYDATA', 300000000, '011');
 
 -- -- Dummy Pension Data for user_id = 1 (linked to the PENSION asset above)
 -- INSERT INTO pension (asset_id, updated_at, pension_type, account_name, principal, personal_contrib, contrib_year, total_personal_contrib) VALUES

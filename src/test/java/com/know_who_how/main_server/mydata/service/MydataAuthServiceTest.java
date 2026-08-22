@@ -40,6 +40,8 @@ class MydataAuthServiceTest {
     private UserRepository userRepository;
     @Mock
     private RedisUtil redisUtil;
+    @Mock
+    private MydataSyncJobService syncJobService;
 
     private MydataProperties props;
 
@@ -56,7 +58,14 @@ class MydataAuthServiceTest {
         props.setClientSecret("client-secret");
         props.setRedirectUri("http://localhost:3000/callback");
 
-        service = Mockito.spy(new MydataAuthService(props, mydataRepository, mydataAuthWebClient, userRepository, redisUtil));
+        service = Mockito.spy(new MydataAuthService(
+                props,
+                mydataRepository,
+                mydataAuthWebClient,
+                userRepository,
+                redisUtil,
+                syncJobService
+        ));
     }
 
     private User newUser(long id) {
@@ -112,6 +121,7 @@ class MydataAuthServiceTest {
 
         verify(redisUtil).save(eq("mydata:access:" + userId), eq("acc"), eq(Duration.ofSeconds(3600)));
         verify(mydataRepository).save(any(Mydata.class));
+        verify(syncJobService).enqueueIfAbsent(userId);
     }
 
     @Test
@@ -137,5 +147,6 @@ class MydataAuthServiceTest {
         verify(redisUtil).save(eq("mydata:access:" + userId), eq("new-acc"), eq(Duration.ofSeconds(1800)));
         assertThat(existing.getRefreshToken()).isEqualTo("new-ref");
         verify(mydataRepository, never()).save(any());
+        verify(syncJobService).enqueueIfAbsent(userId);
     }
 }

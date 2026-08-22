@@ -2,6 +2,7 @@ package com.know_who_how.main_server.mydata.service;
 
 import com.know_who_how.main_server.global.config.MydataProperties;
 import com.know_who_how.main_server.global.entity.Asset.Asset;
+import com.know_who_how.main_server.global.entity.Asset.AssetSource;
 import com.know_who_how.main_server.global.entity.Asset.AssetType;
 import com.know_who_how.main_server.global.entity.Asset.Pension.Pension;
 import com.know_who_how.main_server.global.entity.Asset.Pension.PensionType;
@@ -20,16 +21,14 @@ import com.know_who_how.main_server.user.repository.UserInfoRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +39,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MydataService {
+
+    private static final Duration INLINE_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration BACKGROUND_TIMEOUT = Duration.ofSeconds(10);
 
     private final MydataAuthService mydataAuthService;
     private final MydataProperties mydataProps;
@@ -52,13 +54,13 @@ public class MydataService {
     private final RedisUtil redisUtil;
 
     /**
-     * RS(리소스 서버, MyData API) 호출용 WebClient
+     * MyData AS/RS 공용 WebClient
      * - /api/my-data/summary
      * - /api/my-data/assets/pension 등
      */
-    @Autowired
-    @Qualifier("mydataRsWebClient")
-    private WebClient mydataRsWebClient;
+    private final WebClient mydataWebClient;
+    private final MydataTransactionExecutor transactionExecutor;
+    private final MydataResilienceGuard resilienceGuard;
 
 
     /**
@@ -67,8 +69,33 @@ public class MydataService {
      * 최종 MydataDto를 반환한다.
      * - MyData 토큰은 Mydata 테이블에서만 조회
      */
-    @Transactional
     public MydataDto getMyData(User user) {
+        MydataDto data = fetchMyDataInline(user);
+        if (data != null) {
+            transactionExecutor.execute(() -> persistFetchedData(user, data));
+        }
+        return data;
+    }
+
+    public MydataDto fetchMyDataInline(User user) {
+        try {
+            return resilienceGuard.executeInline(() -> fetchMyData(user, INLINE_TIMEOUT));
+        } catch (io.github.resilience4j.circuitbreaker.CallNotPermittedException
+                 | io.github.resilience4j.bulkhead.BulkheadFullException e) {
+            throw new MydataCallDeferredException("MyData RS call is temporarily blocked", e);
+        }
+    }
+
+    public MydataDto fetchMyDataInBackground(User user) {
+        try {
+            return resilienceGuard.executeBackground(() -> fetchMyData(user, BACKGROUND_TIMEOUT));
+        } catch (io.github.resilience4j.circuitbreaker.CallNotPermittedException
+                 | io.github.resilience4j.bulkhead.BulkheadFullException e) {
+            throw new MydataCallDeferredException("MyData RS call is temporarily blocked", e);
+        }
+    }
+
+    private MydataDto fetchMyData(User user, Duration timeout) {
         // 1) 로그인 여부 확인
         if (user == null) {
             throw new CustomException(ErrorCode.NOT_LOGIN_USER);
@@ -81,7 +108,6 @@ public class MydataService {
             throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
         }
         String accessToken = tokenObj.toString();
-        log.info("access token 정보: {}", accessToken);
         if (accessToken.isBlank()) {
             log.info("Access Token이 만료되었습니다. Refresh Token으로 갱신을 시도하세요.");
             throw new CustomException(ErrorCode.MYDATA_NOT_LINKED);
@@ -94,23 +120,39 @@ public class MydataService {
         MydataResponse response;
 
         try {
-            response = callMyDataApi(url, accessToken);
+            response = callMyDataApi(url, accessToken, timeout);
 
         } catch (WebClientResponseException e) {
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
                 log.info("Access Token 만료 감지. Refresh Token으로 갱신을 시도합니다. UserID: {}", user.getUserId());
 
+                String newAccessToken;
                 try {
-                    String newAccessToken = mydataAuthService.refreshAccessToken(user.getUserId());
-                    response = callMyDataApi(url, newAccessToken);
+                    newAccessToken = mydataAuthService.refreshAccessToken(user.getUserId());
                 } catch (Exception refreshEx) {
                     log.error("Refresh Token 갱신 실패. 재로그인 필요.", refreshEx);
                     throw new CustomException(ErrorCode.MYDATA_EXPIRED);
+                }
+
+                try {
+                    response = callMyDataApi(url, newAccessToken, timeout);
+                } catch (WebClientResponseException retryError) {
+                    if (retryError.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                        throw new CustomException(ErrorCode.MYDATA_EXPIRED);
+                    }
+                    log.error("MyData RS retry request error: {}", retryError.getMessage(), retryError);
+                    throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
+                } catch (RuntimeException retryError) {
+                    log.error("MyData RS retry connection or timeout error", retryError);
+                    throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
                 }
             } else {
                 log.error("MyData RS request error: {}", e.getMessage(), e);
                 throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
             }
+        } catch (RuntimeException e) {
+            log.error("MyData RS connection or timeout error", e);
+            throw new CustomException(ErrorCode.MYDATA_SERVER_ERROR);
         }
 
         // 4) RS에서 내려온 자산 타입 정규화 ("SAVINGS" -> "SAVING")
@@ -129,24 +171,23 @@ public class MydataService {
         // 5) 응답 데이터 추출 및 DB 반영
         MydataDto data = (response != null) ? response.getData() : null;
 
-        if (data != null) {
-            // 자산/퇴직연금 테이블(assets, pension) 갱신
-            persistAssetsAndPensions(user, data);
-            // users / users_info 의 assetTotal, mydata_status 등 갱신
-            updateUserWithMydata(user, data);
-        }
-
         // 6) 최종 DTO 반환 (프론트에서 바로 사용)
         return data;
     }
 
-    private MydataResponse callMyDataApi(String url, String accessToken) {
-        return mydataRsWebClient
+    void persistFetchedData(User user, MydataDto data) {
+        persistAssetsAndPensions(user, data);
+        updateUserWithMydata(user, data);
+    }
+
+    private MydataResponse callMyDataApi(String url, String accessToken, Duration timeout) {
+        return mydataWebClient
                 .get()
                 .uri(url)
                 .headers(headers -> headers.setBearerAuth(accessToken))
                 .retrieve()
                 .bodyToMono(MydataResponse.class)
+                .timeout(timeout)
                 .block();
     }
 
@@ -162,7 +203,7 @@ public class MydataService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 기존 자산/연금 데이터 삭제 (MyData 기준으로 완전히 재생성)
-        List<Asset> existingAssets = assetsRepository.findByUser(managedUser);
+        List<Asset> existingAssets = assetsRepository.findByUserAndSource(managedUser, AssetSource.MYDATA);
         if (!existingAssets.isEmpty()) {
             List<Long> assetIds = existingAssets.stream()
                     .map(Asset::getAssetId)
@@ -188,6 +229,7 @@ public class MydataService {
                 .map(dto -> Asset.builder()
                         .user(managedUser)
                         .type(AssetType.LOAN)
+                        .source(AssetSource.MYDATA)
                         .balance(dto.getBalance().abs())
                         .bankCode(dto.getBankCode())
                         .build());
@@ -227,6 +269,7 @@ public class MydataService {
         return Asset.builder()
                 .user(user)
                 .type(type)
+                .source(AssetSource.MYDATA)
                 .balance(dto.getBalance())
                 .bankCode(dto.getBankCode())
                 .build();

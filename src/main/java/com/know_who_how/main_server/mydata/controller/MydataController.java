@@ -6,7 +6,7 @@ import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.exception.CustomException;
 import com.know_who_how.main_server.global.exception.ErrorCode;
 import com.know_who_how.main_server.mydata.dto.MydataDto;
-import com.know_who_how.main_server.mydata.service.MydataService;
+import com.know_who_how.main_server.mydata.service.MydataQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "7. 마이데이터", description = "마이데이터 자산/부채 조회 API")
 public class MydataController {
 
-    private final MydataService mydataService;
+    private final MydataQueryService mydataQueryService;
 
     /**
      * RS 연금/자산 API 호출 엔드포인트.
@@ -59,7 +59,7 @@ public class MydataController {
         if (user == null) {
             throw new CustomException(ErrorCode.NOT_LOGIN_USER);
         }
-        MydataDto body = mydataService.getMyData(user);
+        MydataDto body = mydataQueryService.getMyData(user);
         return ResponseEntity.ok(ApiResponse.onSuccess(body));
     }
 }

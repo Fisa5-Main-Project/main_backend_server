@@ -1,6 +1,8 @@
 package com.know_who_how.main_server.mydata.service;
 
 import com.know_who_how.main_server.global.config.MydataProperties;
+import com.know_who_how.main_server.global.entity.Asset.Asset;
+import com.know_who_how.main_server.global.entity.Asset.AssetSource;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.entity.User.UserInfo;
 import com.know_who_how.main_server.global.exception.CustomException;
@@ -32,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,9 +59,13 @@ class MydataServiceTest {
     private PensionRepository pensionRepository;
     @Mock
     private RedisUtil redisUtil;
+    @Mock
+    private MydataTransactionExecutor transactionExecutor;
+    @Mock
+    private MydataResilienceGuard resilienceGuard;
 
     @Mock
-    private WebClient mydataRsWebClient;
+    private WebClient mydataWebClient;
     @Mock
     private WebClient.RequestHeadersUriSpec<?> uriSpec;
     @Mock
@@ -77,8 +84,21 @@ class MydataServiceTest {
         props.setRs(rs);
 
         service = new MydataService(mydataAuthService, props, mydataRepository, userRepository,
-                userInfoRepository, assetsRepository, pensionRepository, redisUtil);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "mydataRsWebClient", mydataRsWebClient);
+                userInfoRepository, assetsRepository, pensionRepository, redisUtil, mydataWebClient,
+                transactionExecutor, resilienceGuard);
+        lenient().when(resilienceGuard.executeInline(any())).thenAnswer(invocation -> {
+            Supplier<?> action = invocation.getArgument(0);
+            return action.get();
+        });
+        lenient().when(resilienceGuard.executeBackground(any())).thenAnswer(invocation -> {
+            Supplier<?> action = invocation.getArgument(0);
+            return action.get();
+        });
+        lenient().doAnswer(invocation -> {
+            Runnable action = invocation.getArgument(0);
+            action.run();
+            return null;
+        }).when(transactionExecutor).execute(any(Runnable.class));
     }
 
     private User newUser(long id) {
@@ -168,7 +188,8 @@ class MydataServiceTest {
         stubWebClientResponse(response);
 
         when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-        when(assetsRepository.findByUser(user)).thenReturn(Collections.emptyList());
+        when(assetsRepository.findByUserAndSource(user, AssetSource.MYDATA))
+                .thenReturn(Collections.emptyList());
         when(userInfoRepository.findByUser(user)).thenReturn(Optional.of(
                 UserInfo.builder().user(user)
                         .fixedMonthlyCost(1L)
@@ -181,10 +202,15 @@ class MydataServiceTest {
 
         service.getMyData(user);
 
-        verify(assetsRepository).saveAll(anyList());
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Asset>> savedAssetsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(assetsRepository).saveAll(savedAssetsCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(savedAssetsCaptor.getValue())
+                .allMatch(asset -> asset.getSource() == AssetSource.MYDATA);
         verify(pensionRepository).saveAll(anyList());
         verify(userRepository, atLeastOnce()).save(user);
         verify(userInfoRepository).save(any(UserInfo.class));
+        verify(transactionExecutor).execute(any(Runnable.class));
     }
 
     @Test
@@ -197,7 +223,8 @@ class MydataServiceTest {
         stubWebClientResponseWithRetry(response, true);
 
         when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-        when(assetsRepository.findByUser(user)).thenReturn(Collections.emptyList());
+        when(assetsRepository.findByUserAndSource(user, AssetSource.MYDATA))
+                .thenReturn(Collections.emptyList());
         when(mydataAuthService.refreshAccessToken(user.getUserId())).thenReturn("new-token");
         when(userInfoRepository.findByUser(user)).thenReturn(Optional.empty());
 
@@ -219,6 +246,20 @@ class MydataServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.MYDATA_EXPIRED);
+    }
+
+    @Test
+    @DisplayName("토큰 갱신 후 RS가 5xx를 반환하면 MYDATA_SERVER_ERROR 예외")
+    void getMyData_serverErrorAfterRefresh_throwsServerError() {
+        User user = newUser(35L);
+        when(redisUtil.get("mydata:access:" + user.getUserId())).thenReturn("expired-token");
+        stubWebClientUnauthorizedThenError(500);
+        when(mydataAuthService.refreshAccessToken(user.getUserId())).thenReturn("new-token");
+
+        assertThatThrownBy(() -> service.getMyData(user))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.MYDATA_SERVER_ERROR);
     }
 
     @Test
@@ -253,10 +294,11 @@ class MydataServiceTest {
 
         var existingAsset = com.know_who_how.main_server.global.entity.Asset.Asset.builder()
                 .assetId(99L).user(user).type(com.know_who_how.main_server.global.entity.Asset.AssetType.SAVING)
+                .source(AssetSource.MYDATA)
                 .balance(BigDecimal.TEN).build();
 
         when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-        when(assetsRepository.findByUser(user)).thenReturn(List.of(existingAsset));
+        when(assetsRepository.findByUserAndSource(user, AssetSource.MYDATA)).thenReturn(List.of(existingAsset));
         when(userInfoRepository.findByUser(user)).thenReturn(Optional.empty());
 
         service.getMyData(user);
@@ -264,6 +306,46 @@ class MydataServiceTest {
         verify(pensionRepository).deleteAllById(List.of(99L));
         verify(assetsRepository).deleteAll(List.of(existingAsset));
         verify(assetsRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("MyData 동기화 시 수동 입력 자산은 보존하고 MyData 자산만 교체한다")
+    void getMyData_preservesManualAssetsAndDeletesOnlyMydataAssets() {
+        User user = newUser(55L);
+        when(redisUtil.get("mydata:access:" + user.getUserId())).thenReturn("token");
+
+        MydataResponse response = new MydataResponse();
+        MydataDto data = new MydataDto();
+        data.setAssets(Collections.emptyList());
+        data.setLiabilities(Collections.emptyList());
+        response.setData(data);
+        stubWebClientResponse(response);
+
+        var manualRealEstate = com.know_who_how.main_server.global.entity.Asset.Asset.builder()
+                .assetId(100L)
+                .user(user)
+                .type(com.know_who_how.main_server.global.entity.Asset.AssetType.REAL_ESTATE)
+                .source(AssetSource.MANUAL)
+                .balance(BigDecimal.valueOf(300_000_000L))
+                .build();
+        var existingMydataSaving = com.know_who_how.main_server.global.entity.Asset.Asset.builder()
+                .assetId(101L)
+                .user(user)
+                .type(com.know_who_how.main_server.global.entity.Asset.AssetType.SAVING)
+                .source(AssetSource.MYDATA)
+                .balance(BigDecimal.valueOf(10_000_000L))
+                .build();
+
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(assetsRepository.findByUserAndSource(user, AssetSource.MYDATA))
+                .thenReturn(List.of(existingMydataSaving));
+        when(userInfoRepository.findByUser(user)).thenReturn(Optional.empty());
+
+        service.getMyData(user);
+
+        verify(pensionRepository).deleteAllById(List.of(existingMydataSaving.getAssetId()));
+        verify(assetsRepository).deleteAll(List.of(existingMydataSaving));
+        verify(assetsRepository, never()).deleteAll(List.of(manualRealEstate));
     }
 
     @Test
@@ -284,7 +366,8 @@ class MydataServiceTest {
         stubWebClientResponse(response);
 
         when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-        when(assetsRepository.findByUser(user)).thenReturn(Collections.emptyList());
+        when(assetsRepository.findByUserAndSource(user, AssetSource.MYDATA))
+                .thenReturn(Collections.emptyList());
         when(userInfoRepository.findByUser(user)).thenReturn(Optional.empty());
 
         ArgumentCaptor<List> assetCaptor = ArgumentCaptor.forClass(List.class);
@@ -311,7 +394,7 @@ class MydataServiceTest {
     }
 
     private void stubWebClientResponse(MydataResponse response) {
-        doReturn(uriSpec).when(mydataRsWebClient).get();
+        doReturn(uriSpec).when(mydataWebClient).get();
         doReturn(headersSpec).when(uriSpec).uri(anyString());
         doReturn(headersSpec).when(headersSpec).headers(any());
         doReturn(responseSpec).when(headersSpec).retrieve();
@@ -320,7 +403,7 @@ class MydataServiceTest {
     }
 
     private void stubWebClientResponseWithRetry(MydataResponse response, boolean secondSuccess) {
-        doReturn(uriSpec).when(mydataRsWebClient).get();
+        doReturn(uriSpec).when(mydataWebClient).get();
         doReturn(headersSpec).when(uriSpec).uri(anyString());
         doReturn(headersSpec).when(headersSpec).headers(any());
         doReturn(responseSpec).when(headersSpec).retrieve();
@@ -340,7 +423,7 @@ class MydataServiceTest {
     }
 
     private void stubWebClientError(int status) {
-        doReturn(uriSpec).when(mydataRsWebClient).get();
+        doReturn(uriSpec).when(mydataWebClient).get();
         doReturn(headersSpec).when(uriSpec).uri(anyString());
         doReturn(headersSpec).when(headersSpec).headers(any());
         doReturn(responseSpec).when(headersSpec).retrieve();
@@ -348,5 +431,20 @@ class MydataServiceTest {
                 new org.springframework.web.reactive.function.client.WebClientResponseException(
                         "err", status, "err", HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8
                 )));
+    }
+
+    private void stubWebClientUnauthorizedThenError(int secondStatus) {
+        doReturn(uriSpec).when(mydataWebClient).get();
+        doReturn(headersSpec).when(uriSpec).uri(anyString());
+        doReturn(headersSpec).when(headersSpec).headers(any());
+        doReturn(responseSpec).when(headersSpec).retrieve();
+
+        AtomicInteger count = new AtomicInteger();
+        when(responseSpec.bodyToMono(eq(MydataResponse.class))).thenAnswer(invocation -> {
+            int status = count.getAndIncrement() == 0 ? 401 : secondStatus;
+            return Mono.error(new org.springframework.web.reactive.function.client.WebClientResponseException(
+                    "err", status, "err", HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8
+            ));
+        });
     }
 }

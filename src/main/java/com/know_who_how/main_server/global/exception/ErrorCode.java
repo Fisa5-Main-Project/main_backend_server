@@ -44,6 +44,7 @@ public enum ErrorCode {
     SIGNUP_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "AUTH_016", "유효하지 않은 회원가입 토큰입니다."),
     SOCIAL_ACCOUNT_ALREADY_REGISTERED(HttpStatus.CONFLICT, "AUTH_017", "이미 해당 소셜 계정으로 가입된 유저입니다."),
     OAUTH_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "AUTH_018", "소셜 로그인에 실패했습니다."),
+    REFRESH_TOKEN_REUSE_DETECTED(HttpStatus.UNAUTHORIZED, "AUTH_019", "리프레시 토큰 재사용이 감지되었습니다. 보안을 위해 강제 로그아웃되었습니다."),
 
     // Common Exception
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "COMMON_001", "입력값이 유효하지 않습니다."),

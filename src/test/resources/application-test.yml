@@ -89,7 +89,7 @@ jwt:
   secret: c3ByaW5nLWJvb3QtdGVzdC1hdXRoLWtleS13aWxsLWJlLTQ4LWNoYXJhY3RlcnM=
   refresh-secret: c3ByaW5nLWJvb3QtcmVmcmVzaC1rZXktd2lsbC1iZS00OC1jaGFyYWN0ZXJzLWZm
   access-token-validity-in-seconds: 1800
-  refresh-token-validity-in-seconds: 604800
+  refresh-token-validity-in-seconds: 259200
 
 coolsms:
   api-key: test-coolsms-key
