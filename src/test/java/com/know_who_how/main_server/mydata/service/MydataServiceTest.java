@@ -58,7 +58,7 @@ class MydataServiceTest {
     private RedisUtil redisUtil;
 
     @Mock
-    private WebClient mydataRsWebClient;
+    private WebClient mydataWebClient;
     @Mock
     private WebClient.RequestHeadersUriSpec<?> uriSpec;
     @Mock
@@ -77,8 +77,7 @@ class MydataServiceTest {
         props.setRs(rs);
 
         service = new MydataService(mydataAuthService, props, mydataRepository, userRepository,
-                userInfoRepository, assetsRepository, pensionRepository, redisUtil);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "mydataRsWebClient", mydataRsWebClient);
+                userInfoRepository, assetsRepository, pensionRepository, redisUtil, mydataWebClient);
     }
 
     private User newUser(long id) {
@@ -311,7 +310,7 @@ class MydataServiceTest {
     }
 
     private void stubWebClientResponse(MydataResponse response) {
-        doReturn(uriSpec).when(mydataRsWebClient).get();
+        doReturn(uriSpec).when(mydataWebClient).get();
         doReturn(headersSpec).when(uriSpec).uri(anyString());
         doReturn(headersSpec).when(headersSpec).headers(any());
         doReturn(responseSpec).when(headersSpec).retrieve();
@@ -320,7 +319,7 @@ class MydataServiceTest {
     }
 
     private void stubWebClientResponseWithRetry(MydataResponse response, boolean secondSuccess) {
-        doReturn(uriSpec).when(mydataRsWebClient).get();
+        doReturn(uriSpec).when(mydataWebClient).get();
         doReturn(headersSpec).when(uriSpec).uri(anyString());
         doReturn(headersSpec).when(headersSpec).headers(any());
         doReturn(responseSpec).when(headersSpec).retrieve();
@@ -340,7 +339,7 @@ class MydataServiceTest {
     }
 
     private void stubWebClientError(int status) {
-        doReturn(uriSpec).when(mydataRsWebClient).get();
+        doReturn(uriSpec).when(mydataWebClient).get();
         doReturn(headersSpec).when(uriSpec).uri(anyString());
         doReturn(headersSpec).when(headersSpec).headers(any());
         doReturn(responseSpec).when(headersSpec).retrieve();

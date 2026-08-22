@@ -20,8 +20,6 @@ import com.know_who_how.main_server.user.repository.UserInfoRepository;
 import com.know_who_how.main_server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,13 +50,11 @@ public class MydataService {
     private final RedisUtil redisUtil;
 
     /**
-     * RS(리소스 서버, MyData API) 호출용 WebClient
+     * MyData AS/RS 공용 WebClient
      * - /api/my-data/summary
      * - /api/my-data/assets/pension 등
      */
-    @Autowired
-    @Qualifier("mydataRsWebClient")
-    private WebClient mydataRsWebClient;
+    private final WebClient mydataWebClient;
 
 
     /**
@@ -141,7 +137,7 @@ public class MydataService {
     }
 
     private MydataResponse callMyDataApi(String url, String accessToken) {
-        return mydataRsWebClient
+        return mydataWebClient
                 .get()
                 .uri(url)
                 .headers(headers -> headers.setBearerAuth(accessToken))

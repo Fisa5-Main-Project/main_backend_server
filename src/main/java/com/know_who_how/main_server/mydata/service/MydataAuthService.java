@@ -33,7 +33,7 @@ public class MydataAuthService {
 
     private final MydataProperties mydataProperties;
     private final MydataRepository mydataRepository;
-    private final WebClient mydataAuthWebClient;
+    private final WebClient mydataWebClient;
     private final UserRepository userRepository;
 
     private final RedisUtil redisUtil;
@@ -200,7 +200,7 @@ public class MydataAuthService {
         String tokenUri = mydataProperties.getAs().getTokenUri();
 
         try {
-            return mydataAuthWebClient.post()
+            return mydataWebClient.post()
                     .uri(tokenUri)
                     .headers(headers -> headers.setBasicAuth(
                             mydataProperties.getClientId(),
