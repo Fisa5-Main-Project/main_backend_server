@@ -1,6 +1,7 @@
 package com.know_who_how.main_server.user.service;
 
 import com.know_who_how.main_server.global.entity.Asset.Asset;
+import com.know_who_how.main_server.global.entity.Asset.AssetSource;
 import com.know_who_how.main_server.global.entity.Asset.AssetType;
 import com.know_who_how.main_server.global.entity.Asset.Pension.Pension;
 import com.know_who_how.main_server.global.entity.Keyword.Keyword;
@@ -56,6 +57,7 @@ public class UserService {
             assets.add(Asset.builder()
                     .user(foundUser)
                     .type(AssetType.REAL_ESTATE)
+                    .source(AssetSource.MANUAL)
                     .balance(new java.math.BigDecimal(request.getRealEstate()))
                     .build());
         }
@@ -64,6 +66,7 @@ public class UserService {
             assets.add(Asset.builder()
                     .user(foundUser)
                     .type(AssetType.AUTOMOBILE)
+                    .source(AssetSource.MANUAL)
                     .balance(new java.math.BigDecimal(request.getCar()))
                     .build());
         }

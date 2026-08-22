@@ -2,9 +2,11 @@ package com.know_who_how.main_server.global.util;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
@@ -34,5 +36,22 @@ public class RedisUtil {
     // Key의 존재 여부를 확인하는 메소드 추가
     public Boolean hasKey(String key) {
         return redisTemplate.hasKey(key);
+    }
+
+    public boolean setIfAbsent(String key, Object value, Duration expireDuration) {
+        return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, value, expireDuration));
+    }
+
+    public boolean deleteIfValueMatches(String key, String expectedValue) {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setResultType(Long.class);
+        script.setScriptText("""
+                if redis.call('get', KEYS[1]) == ARGV[1] then
+                    return redis.call('del', KEYS[1])
+                end
+                return 0
+                """);
+        Long deleted = redisTemplate.execute(script, Collections.singletonList(key), expectedValue);
+        return deleted != null && deleted == 1L;
     }
 }

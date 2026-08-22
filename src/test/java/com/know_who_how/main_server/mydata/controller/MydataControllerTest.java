@@ -3,7 +3,7 @@ package com.know_who_how.main_server.mydata.controller;
 import com.know_who_how.main_server.global.entity.User.User;
 import com.know_who_how.main_server.global.jwt.JwtAuthFilter;
 import com.know_who_how.main_server.mydata.dto.MydataDto;
-import com.know_who_how.main_server.mydata.service.MydataService;
+import com.know_who_how.main_server.mydata.service.MydataQueryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ class MydataControllerTest {
     private JwtAuthFilter jwtAuthFilter;
 
     @MockBean
-    private MydataService mydataService;
+    private MydataQueryService mydataQueryService;
 
     private User createTestUser() {
         try {
@@ -64,7 +64,7 @@ class MydataControllerTest {
         MydataDto dto = new MydataDto();
         dto.setAssets(Collections.emptyList());
         dto.setLiabilities(Collections.emptyList());
-        given(mydataService.getMyData(user)).willReturn(dto);
+        given(mydataQueryService.getMyData(user)).willReturn(dto);
 
         // when
         ResultActions result = mockMvc.perform(

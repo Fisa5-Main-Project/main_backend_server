@@ -28,6 +28,10 @@ public class Asset {
     @Column(name = "type", nullable = false)
     private AssetType type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false)
+    private AssetSource source;
+
     @Column(name = "balance", nullable = false)
     private BigDecimal balance;
 
