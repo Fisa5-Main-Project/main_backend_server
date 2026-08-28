@@ -17,15 +17,19 @@
 노후하우(KnowWhoHow)는 초고령 사회 진입에 맞춰 시니어층의 전 생애주기 고민(자산 관리, 일자리, 상속/디지털 유산)을 하나의 플랫폼에서 해결하는 **시니어 맞춤형 포용 금융 앱**입니다.
 
 * **맞춤형 자산 설계**: MyData 자산 연동, 포트폴리오 진단, 금융 상품 시뮬레이션
-
+<img width="1174" height="655" alt="{C553B318-CE7E-462B-95C8-5989206DCB78}" src="https://github.com/user-attachments/assets/92016733-74e9-4d25-b025-3b4bc7ca6f4a" />
 
 * **AI 자산 관리 상담**: RAG(Retrieval-Augmented Generation) 기반 시니어 전용 금융 상담 챗봇
+<img width="1168" height="660" alt="{1AB40161-C485-4BB5-A952-CB89FEC0152D}" src="https://github.com/user-attachments/assets/32a323ba-b739-4c5b-a33d-01931dc740b4" />
 
 
 * **시니어 일자리 연계**: 위치 기반 공공 구인 API를 활용한 맞춤형 채용 정보 탐색
+<img width="1160" height="652" alt="{1AEE23FA-C513-4E78-8EF2-75075799B17A}" src="https://github.com/user-attachments/assets/cfca8da8-0c26-4a25-96f2-9b8f3dc0c2b1" />
 
 
 * **디지털 유산 & 상속**: 법정상속분/유류분 시뮬레이션 및 S3 멀티파트 업로드 기반 영상 편지 예약 발송
+<img width="1172" height="660" alt="{D865DF7C-4228-4FA4-B2A6-5A76DEBD30BC}" src="https://github.com/user-attachments/assets/a642d1ed-7689-4df4-b26f-09ed73b97384" />
+<img width="1172" height="654" alt="{5294F1D0-47F2-446C-8C5D-51BB3EB4666A}" src="https://github.com/user-attachments/assets/97c6bb1c-8e07-4c21-8a6c-241502fac033" />
 
 
 
