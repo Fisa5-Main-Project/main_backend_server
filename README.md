@@ -1,267 +1,236 @@
-# KnowWhoHow Backend
+# # KnowWhoHow Backend
 
-노후하우(KnowWhoHow)의 메인 백엔드 서버입니다.
+> **노후 준비, 어떻게(How) 해야 할까?**
+> 고객이 누구인지를 깊이 이해하고(`Know Who`), 그들에게 딱 맞는 노후 솔루션을 제시(`Know How`)하는 시니어 통합 자산 관리 & 라이프 케어 플랫폼 **노후하우(KnowWhoHow)** 의 백엔드 서버입니다.
+> 
+> 
 
-사용자의 자산과 재무 목표를 바탕으로 포트폴리오를 진단하고, 금융 상품 시뮬레이션·일자리 탐색·MyData 연동·디지털 유산(영상 편지) 관리를 제공하는 REST API 서버입니다.
+---
 
-## 주요 기능
+## 1. 표지
 
-| 도메인 | 제공 기능 |
-| --- | --- |
-| 인증 | 일반 회원가입/로그인, Kakao OAuth2 로그인, JWT 재발급·로그아웃, CoolSMS 휴대폰 인증 |
-| 사용자 | 프로필, 관심 키워드, 투자 성향, 보유 자산·연금 자산 관리, 회원 탈퇴 |
-| 자산 관리 | 재무 설문 저장, 포트폴리오 진단, 예금·적금 만기 금액 시뮬레이션, 금융 상품 조회 |
-| MyData | Authorization Code 기반 연동, 토큰 관리, 외부 Resource Server의 자산 데이터 조회 |
-| 일자리 | 공공 Open API 기반 채용 공고 검색·상세 조회, Redis 캐시 |
-| 디지털 유산 | 상속 계획, S3 영상 멀티파트 업로드, 수신인 등록, 예약 이메일 발송 및 영상 열람 |
+```text
+================================================================================
+                        KNOW WHO , KNOW HOW
+              시니어 맞춤형 통합 라이프 케어 플랫폼 "노후하우"
+================================================================================
+  - Backend & Infrastructure Repository -
 
-## 기술 스택
+```
 
-### Application
+---
 
-- Java 17
-- Spring Boot 3.2.5
-- Spring Web MVC, Validation
-- Spring Data JPA
-- Spring Security
-- Spring WebFlux `WebClient`
-- Resilience4j: MyData 외부 서버 장애 격리와 동시 호출 제한
-- Gradle
-- Lombok
+## 2. 프로젝트 소개
+
+노후하우(KnowWhoHow)는 초고령 사회 진입에 맞춰 시니어층의 전 생애주기 고민(자산 관리, 일자리, 상속/디지털 유산)을 하나의 플랫폼에서 해결하는 **시니어 맞춤형 포용 금융 앱**입니다.
+
+* **맞춤형 자산 설계**: MyData 자산 연동, 포트폴리오 진단, 금융 상품 시뮬레이션
+
+
+* **AI 자산 관리 상담**: RAG(Retrieval-Augmented Generation) 기반 시니어 전용 금융 상담 챗봇
+
+
+* **시니어 일자리 연계**: 위치 기반 공공 구인 API를 활용한 맞춤형 채용 정보 탐색
+
+
+* **디지털 유산 & 상속**: 법정상속분/유류분 시뮬레이션 및 S3 멀티파트 업로드 기반 영상 편지 예약 발송
+
+
+
+---
+
+## 3. 프로젝트 배경
+
+* **초고령 사회 진입과 자산의 불균형**
+
+* 65세 이상 인구 비중 20% 돌파, 고령층 자산 규모는 커졌으나 부동산 평균 비중이 68.2%, 금융 자산 중 예적금 비중이 88%로 **유동 현금 흐름 창출 능력이 현저히 부족**함.
+
+
+
+
+* **분산 투자 부족 및 정보 격차**
+
+* 낮은 소득층일수록 자산 운용 기회가 부족하고 원리금 보장형 상품에 치중되어 **자산 성장이 정체**됨.
+
+
+
+
+* **기존 금융 플랫폼의 한계**
+
+* 기존 시니어 금융 서비스는 특정 은행에 종속적이거나 단순 정보 제공에 그쳐 **상속, 신탁, 은퇴 후 일자리까지 아우르는 모바일 통합 케어가 부재**함.
+
+
+
+
+* **해결 방안**
+
+* AI 기반 가이드라인 제공 및 사용자 맞춤 자산 유동화 전략을 제공하여 **정보 소외를 넘어 포용 금융을 실현**함.
+
+
+
+
+
+---
+
+## 4. 주요 기능
+
+| 도메인 | 주요 기능 | 상세 설명 |
+| --- | --- | --- |
+| **인증/회원** | 회원가입 및 프로필 | CoolSMS 휴대폰 인증, Kakao OAuth2, JWT 재발급, 투자 성향 및 은퇴 키워드 관리
+
+ |
+| **자산 관리** | 포트폴리오 진단 | 자산 및 소득·지출 기반 예금형/적금형 유형 판별, 예/적금 만기 금액 시뮬레이션
+
+ |
+| **MyData** | 자산 데이터 연동 | Auth Code 기반 연동, Access Token Redis 저장, 백그라운드 Worker 스냅샷 갱신
+
+ |
+| **AI 챗봇** | RAG 기반 상담 | Airflow-MongoDB Atlas 기반 벡터 검색, 실시간 Re-Ranking, 프롬프트 인젝션 방어
+
+ |
+| **일자리** | 맞춤 채용 정보 | 위치 기반(GeoCoding) 노인 구인 Open API 조회, Redis 3단계 캐싱으로 성능 최적화
+
+ |
+| **상속/유산** | 유산 및 영상 편지 | 법정상속분/유류분 차이 계산, S3 Presigned URL 멀티파트 업로드, SMTP 예약 발송
+
+ |
+
+---
+
+## 5. 핵심 기능 (Deep Dive)
+
+### 1) RAG 기반 AI 자산 관리 상담 챗봇
+
+* **자동화 파이프라인**: Apache Airflow를 통해 매일 새벽 금융 데이터를 수집·전처리 및 `gemini-embedding-001`로 임베딩하여 MongoDB Atlas Vector Search에 적재.
+
+
+* **사용자 피드백 Re-Ranking**: 사용자의 '좋아요/싫어요' 피드백을 실시간 기록하여 추천 결과에 반형 (Re-Rank).
+
+
+* **보안 & 가이드라인**: 프롬프트 인젝션 키워드 차단 및 금융소비자보호법 6대 판매 원칙 준수 가이드 적용.
+
+
+
+### 2) Redis를 활용한 외부 Open API 성능 최적화
+
+* **문제점**: 공공 일자리 API의 응답 지연(최대 10초 이상) 및 상세 API 내 고용 형태 데이터 누락.
+
+
+* **해결책**: 3계층 캐싱 구조 도입
+
+
+* `jobs:list:` (TTL 10분) - 목록 검색 조건 저장
+
+
+* `job:detail:` (TTL 1시간) - 상세 정보 저장
+
+
+* `job:extra:` (TTL 24시간) - 상세 응답 보합용 데이터 저장
+
+
+
+
+
+### 3) 대용량 영상 편지 멀티파트 업로드 & 예약 발송 System
+
+* **대용량 파일 처리**: AWS S3 Presigned URL + Multipart Upload 방식을 적용해 서버 트래픽 부하 최적화.
+
+
+* **보안 링크 및 스케줄러**: 매분 실행되는 `InheritanceScheduler`가 수혜자에게 일회성 보안 토큰 링크를 SMTP로 전송.
+
+
+
+---
+
+## 6. 시연 영상
+
+> 아래 이미지를 클릭하거나 링크를 통해 주요 기능 시연 영상 및 동작 흐름을 확인할 수 있습니다.
+> 
+> 
+
+* **메인 시연 영상**: `https://github.com/your-repo/demo-video.mp4` *(링크 수정 필요)*
+
+* **주요 시연 스크린샷**:
+| 회원가입 & 키워드 설정 | 자산 포트폴리오 진단 | AI 상담 챗봇 |
+| --- | --- | --- |
+|  |  |  |
+
+
+
+---
+
+## 7. 기술 스택
+
+### Application & Framework
+
+* **Java 17** / **Spring Boot 3.2.5**
+
+* Spring Web MVC, Spring Security, Spring Data JPA, Spring WebFlux (`WebClient`)
+
+
+* **FastAPI** (AI Server)
+
+
+* Resilience4j (외부 API 장애 격리 및 Circuit Breaker)
+
+
 
 ### Data & Infrastructure
 
-- MySQL: 서비스 영속 데이터
-- Redis: 인증 코드, 임시 OAuth 정보, MyData Access Token·최초 조회 중복 방지 락, 채용 API 캐시
-- AWS S3: 영상 편지 저장 및 Presigned URL 기반 멀티파트 업로드
-- SMTP: 예약 영상 편지 링크 발송
-- CoolSMS(Solapi): 휴대폰 본인 인증
-- Docker, Docker Compose, Nginx
-
-### Authentication & API
-
-- JJWT 0.12.5
-- Kakao OAuth2
-- springdoc-openapi / Swagger UI
-
-### Test
-
-- JUnit 5
-- Spring Boot Test
-- Spring Security Test
-- H2
-- JaCoCo
-
-## 아키텍처
-
-프로젝트는 도메인 단위 패키지와 계층형 구조를 함께 사용합니다.
-
-```text
-Client
-  │
-  ▼
-Spring Security / JWT Filter
-  │
-  ▼
-Controller ── DTO / Validation
-  │
-  ▼
-Service ──── Transaction / Business Logic
-  │
-  ├── Repository ── JPA ── MySQL
-  ├── Redis
-  └── External Services
-      ├── Kakao / CoolSMS
-      ├── MyData AS·RS
-      ├── 공공 일자리 Open API
-      ├── AWS S3
-      └── SMTP
-```
-
-### 요청과 응답
-
-1. 공개 API를 제외한 요청은 `JwtAuthFilter`에서 Bearer Access Token을 검증합니다.
-2. 인증된 사용자 엔티티는 `@AuthenticationPrincipal`을 통해 컨트롤러에 전달됩니다.
-3. 컨트롤러는 입력 검증과 HTTP 응답을 담당하고, 서비스가 트랜잭션과 비즈니스 규칙을 처리합니다.
-4. 일반 응답은 아래의 공통 포맷을 사용합니다.
-
-```json
-{
-  "isSuccess": true,
-  "data": {},
-  "error": null
-}
-```
-
-실패 시에는 `GlobalExceptionHandler`가 HTTP 상태와 서비스 에러 코드를 포함한 응답으로 변환합니다.
-
-```json
-{
-  "isSuccess": false,
-  "data": null,
-  "error": {
-    "code": "AUTH_015",
-    "message": "사용자를 찾을 수 없습니다."
-  }
-}
-```
-
-## 핵심 동작
-
-### JWT 인증
-
-- Access Token과 Refresh Token은 서로 다른 Secret과 만료 시간을 사용합니다.
-- 비밀번호는 BCrypt로 단방향 암호화합니다.
-- 서버 세션을 생성하지 않는 Stateless 방식입니다.
-- Refresh Token은 DB에 저장하며, 로그아웃 시 토큰을 무효화합니다.
-- 로그인·회원가입·토큰 재발급·OAuth 콜백·Swagger·영상 편지 공개 링크 등만 인증 없이 접근할 수 있습니다.
-
-인증이 필요한 API는 다음 헤더를 사용합니다.
-
-```http
-Authorization: Bearer <access-token>
-```
-
-### MyData 연동
-
-1. 서버가 MyData Authorization Server의 인가 URL을 생성합니다.
-2. 사용자가 동의하면 Callback의 Authorization Code를 토큰으로 교환합니다.
-3. 짧게 유지되는 Access Token은 TTL과 함께 Redis에 저장합니다.
-4. Refresh Token과 Scope는 MySQL의 `my_data` 테이블에 저장합니다.
-5. 연동 완료 후 초기 동기화 Job(작업)을 생성하고, 백그라운드 Worker(작업 실행기)가 Resource Server에서 자산 정보를 가져옵니다.
-6. 자산 조회 시에는 Snapshot(마지막 정상 응답 복사본)을 즉시 반환하고, 오래된 Snapshot은 백그라운드에서 갱신합니다.
-7. Snapshot이 없는 최초 조회만 짧게 Resource Server를 호출하며, Redis 락(중복 실행 잠금)으로 동일 사용자의 중복 호출을 방지합니다.
-
-Resource Server에 장애가 발생해도 Snapshot이 있으면 마지막 성공 데이터를 반환합니다. Snapshot이 없으면 기존 `MYDATA_SERVER_ERROR`를 반환하며, Refresh Token까지 만료된 경우에는 재연동이 필요합니다. Snapshot payload는 현재 암호화하지 않은 JSON으로 저장되므로 운영 DB 접근 권한과 보관·삭제 정책을 별도로 관리해야 합니다.
+* **MySQL**: 서비스 영속 데이터 관리
 
 
-### 채용 정보
+* **Redis**: JWT, OTP, MyData Access Token, Lock, 채용 API 캐시
 
-`JobOpenApiClient`가 공공 Open API를 호출하고 응답을 내부 DTO로 변환합니다. 목록 조회 결과의 부가 정보는 Redis에 캐시하며, 상세 조회 시 목록 정보와 상세 응답을 조합합니다.
 
-### 영상 편지
+* **MongoDB Atlas**: Vector Search (금융 상품 임베딩 데이터)
 
-- 대용량 영상은 서버를 경유하지 않고 S3 Presigned URL로 멀티파트 업로드합니다.
-- 업로드 초기화 → Part URL 발급 → 업로드 완료 순서로 동작합니다.
-- 수신인별 일회성 접근 링크와 발송 예정 시간을 저장합니다.
-- 매분 실행되는 `InheritanceScheduler`가 발송 대상자를 조회해 SMTP로 영상 링크를 전송합니다.
-- 공개 영상 링크는 접근 토큰을 검증한 뒤 제한된 시간의 S3 조회 URL로 연결됩니다.
 
-## 프로젝트 구조
+* **Apache Airflow**: 금융 데이터 ETL 및 임베딩 자동화 파이프라인
+
+
+* **AWS S3**: 대용량 영상 파일 저장소
+
+
+* **Docker / Docker Compose / Nginx**
+
+
+---
+
+## 8. 인프라 구조도
+
+본 프로젝트는 보안성을 높이기 위해 민감 데이터를 다루는 온프레미스(On-Premise)와 클라우드(AWS Public Cloud)를 터널링(Tunneling)으로 연결한 **하이브리드 아키텍처**를 채택했습니다.
 
 ```text
-src
-├── main
-│   ├── java/com/know_who_how/main_server
-│   │   ├── auth              # 회원가입, 로그인, SMS, Kakao OAuth2
-│   │   ├── user              # 사용자·자산·키워드 관리
-│   │   ├── asset_management  # 포트폴리오와 금융 시뮬레이션
-│   │   ├── mydata            # MyData 인증 및 자산 조회
-│   │   ├── job               # 일자리 Open API 연동
-│   │   ├── inheritance       # 상속 계획, 영상, 수신인, 예약 발송
-│   │   └── global
-│   │       ├── config        # Security, Redis, AWS, WebClient 설정
-│   │       ├── dto           # 공통 API 응답
-│   │       ├── entity        # JPA 엔티티
-│   │       ├── exception     # 전역 예외 처리와 에러 코드
-│   │       ├── jwt           # JWT 생성·검증·필터
-│   │       └── util          # Redis, Cookie 유틸리티
-│   └── resources
-│       └── data.sql          # 초기 기준 데이터
-└── test                     # 도메인별 단위·통합 테스트
+[ On-Premise ]                            [ Public Cloud (AWS) ]
+┌───────────────────────────┐             ┌─────────────────────────────────────────────────┐
+│ Git / CI/CD (Jenkins)     │             │ VPC                                             │
+│ MyData Auth/Resource Server               │ ┌────────────────┐    ┌──────────────────────┐ │
+│ Data Collecting (Airflow) │ ◄─Tunneling─► │ │ Public Subnet  │    │ Private Subnet       │ │
+│ MySQL (Master/Slave)      │             │ │ - Bastion Host │ ─► │ - Backend (Spring)   │ │
+│ MongoDB Atlas (Vector)    │             │ │ - Reverse Proxy│    │ - AI Server (FastAPI)│ │
+└───────────────────────────┘             │ └────────────────┘    │ - Frontend           │ │
+                                          │                       └──────────────────────┘ │
+                                          └─────────────────────────────────────────────────┘
+
 ```
 
-## 시작하기
+## 9. Contributors
 
-### 사전 요구사항
+| Name | Role | Responsibilities |
+| --- | --- | --- |
+| **조원희** | PM / 백엔드 | 메인 백엔드 아키텍처 설계, 마이데이터 서버 구축 
 
-- JDK 17
-- MySQL
-- Redis
-- 사용할 외부 서비스의 인증 정보
-  - Kakao OAuth2
-  - CoolSMS
-  - 공공 일자리 Open API
-  - MyData Authorization/Resource Server
-  - AWS S3
-  - SMTP
+ |
+| **이종혁** | PL / 프론트 / 백엔드 / AI | UI/UX 디자인, 회원 인증/가입 API 및 보안 로직 구현, 자산 포트폴리오 진단 서비스 개발,  RAG AI 상담 챗봇 파이프라인 구축
 
-### 데이터베이스 마이그레이션
+ |
+| **오지영** | 디자인 / 프론트 / 백엔드 | 로고 디자인, 백엔드 시스템 개발, ELK 로그 시스템 환경 설정 
 
-애플리케이션 배포 전에 다음 SQL을 순서대로 MySQL에 적용해야 합니다. 현재 프로젝트는 마이그레이션을 자동 실행하지 않습니다.
+ |
+| **양유진** | 디자인 / 프론트 / 백엔드 | UI/UX 디자인, 디자인 시스템 설계, 상속 설계 및 영상편지 발송 로직 구현, 일자리 찾기 서비스 개발
 
-```text
-1. docker/migrations/20260822_add_asset_source.sql
-2. docker/migrations/20260822_create_mydata_sync_tables.sql
-```
+ |
+| **김현진** | 인프라 | 클라우드 VPC/네트워크 구축
 
-
-
-
-## API 문서
-
-애플리케이션 실행 후 Swagger UI에서 요청·응답 스키마와 각 API의 상세 설명을 확인할 수 있습니다.
-
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
-- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
-
-주요 엔드포인트는 다음과 같습니다.
-
-| Method | Endpoint | 설명 | 인증 |
-| --- | --- | --- | --- |
-| `POST` | `/api/v1/auth/signup/submit` | 회원가입 | 불필요 |
-| `POST` | `/api/v1/auth/login` | 일반 로그인 | 불필요 |
-| `POST` | `/api/v1/auth/reissue` | Access Token 재발급 | 불필요 |
-| `GET` | `/login/oauth2/code/{registrationId}` | 소셜 로그인 Callback | 불필요 |
-| `GET/PATCH` | `/api/v1/user/...` | 사용자·자산·키워드 관리 | 필요 |
-| `GET` | `/api/v1/asset-management/portfolio` | 포트폴리오 진단 | 필요 |
-| `POST` | `/api/v1/asset-management/simulate/saving` | 적금 시뮬레이션 | 필요 |
-| `POST` | `/api/v1/asset-management/simulate/deposit` | 예금 시뮬레이션 | 필요 |
-| `GET` | `/api/v1/my-data/authorize` | MyData 연동 시작 | 필요 |
-| `GET` | `/api/v1/resource/my-data` | MyData 자산 조회 | 필요 |
-| `GET` | `/api/v1/jobs` | 채용 공고 검색 | 필요 |
-| `GET` | `/api/v1/jobs/{jobId}` | 채용 공고 상세 | 필요 |
-| `POST/GET` | `/api/v1/inheritance/plan` | 상속 계획 저장·조회 | 필요 |
-| `POST` | `/api/v1/inheritance/{id}/video/upload/init` | 영상 업로드 초기화 | 필요 |
-| `GET` | `/api/v1/inheritance/video-letter` | 수신인 영상 열람 | 접근 토큰 |
-
-## 테스트와 커버리지
-
-전체 테스트:
-
-```shell
-./gradlew test
-```
-
-테스트 완료 후 JaCoCo HTML 보고서는 다음 위치에 생성됩니다.
-
-```text
-build/reports/jacoco/test/html/index.html
-```
-
-테스트는 `application-test.yml`과 H2의 MySQL 호환 모드를 사용합니다. 외부 인프라에 의존하는 객체는 테스트별 Mock 구성이 필요합니다. MyData Repository와 마이그레이션에는 MySQL 전용 문법이 있으므로 배포 전 실제 MySQL과 Redis를 사용하는 통합 테스트가 필요합니다.
-
-## Docker
-
-JAR 이미지 빌드:
-
-```shell
-./gradlew clean bootJar
-docker build -f docker/Dockerfile -t knowwhohow-main .
-```
-
-저장소의 `docker-compose.yml`은 다음 구성을 전제로 합니다.
-
-- `${DOCKER_USERNAME}/knowwhohow-main:latest` 백엔드 이미지
-- 비밀번호가 설정된 Redis
-- 외부 MySQL 및 외부 서비스 설정
-- `./nginx/conf`에 준비된 Nginx 설정
-
-```shell
-docker compose up -d
-```
-
-
-
-
-
+ |
