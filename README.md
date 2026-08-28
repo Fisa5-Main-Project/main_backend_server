@@ -181,16 +181,16 @@
 본 프로젝트는 보안성을 높이기 위해 민감 데이터를 다루는 온프레미스(On-Premise)와 클라우드(AWS Public Cloud)를 터널링(Tunneling)으로 연결한 **하이브리드 아키텍처**를 채택했습니다.
 
 ```text
-[ On-Premise ]                            [ Public Cloud (AWS) ]
-┌───────────────────────────┐             ┌─────────────────────────────────────────────────┐
-│ Git / CI/CD (Jenkins)     │             │ VPC                                             │
-│ MyData Auth/Resource Server             │ ┌────────────────┐    ┌──────────────────────┐ │
-│ Data Collecting (Airflow) │ ◄─Tunneling─► │ │ Public Subnet  │    │ Private Subnet       │ │
-│ MySQL (Master/Slave)      │             │ │ - Bastion Host │ ─► │ - Backend (Spring)   │ │
-│ MongoDB Atlas (Vector)    │             │ │ - Reverse Proxy│    │ - AI Server (FastAPI)│ │
-└───────────────────────────┘             │ └────────────────┘    │ - Frontend           │ │
-                                          │                       └──────────────────────┘ │
-                                          └─────────────────────────────────────────────────┘
+[ On-Premise ]                             [ Public Cloud (AWS) ]
+┌───────────────────────────┐              ┌────────────────────────────────────────────────────────┐
+│ Git / CI/CD (Jenkins)     │              │ VPC                                                    │
+│ MyData Auth/Resource Server              │ ┌──────────────────┐      ┌──────────────────────────┐ │
+│ Data Collecting (Airflow) │ ◄─Tunneling─►│ │ Public Subnet    │      │ Private Subnet           │ │
+│ MySQL (Master/Slave)      │              │ │ - Bastion Host   │ ───► │ - Backend (Spring Boot)  │ │
+│ MongoDB Atlas (Vector)    │              │ │ - Reverse Proxy  │      │ - AI Server (FastAPI)    │ │
+└───────────────────────────┘              │ └──────────────────┘      │ - Frontend               │ │
+                                           │                           └──────────────────────────┘ │
+                                           └────────────────────────────────────────────────────────┘
 
 ```
 
