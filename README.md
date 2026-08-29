@@ -134,23 +134,25 @@
 
 ## 8. 인프라 구조도
 
-인프라는 하이브리드, AWS 클라우드, 온프레미스의 세 가지 관점으로 구성됩니다.
 
-### 1) 하이브리드 아키텍처
+### 1) 하이브리드 아키텍처 구성
 
-이미지
+<img width="2788" height="1656" alt="image" src="https://github.com/user-attachments/assets/a7d060db-fc6d-436c-ba5b-888248ac4b9b" />
+
 
 민감 정보 보호와 비용 효율성을 위해 온프레미스와 AWS를 터널링으로 연결했습니다. CI/CD·데이터 수집·MyData는 온프레미스에서, Main·AI·Frontend 서버는 AWS Private Subnet에서 운영합니다.
 
-### 2) AWS 클라우드 아키텍처
+### 2) AWS 아키텍처
 
-이미지
+<img width="1378" height="897" alt="image" src="https://github.com/user-attachments/assets/96b16e4e-5fa0-4890-9c26-4c56f3fc5385" />
+
 
 외부 요청은 Route 53과 WAF를 거쳐 Public Subnet의 Nginx Reverse Proxy로 전달된 후, Private Subnet의 대상 서버로 라우팅됩니다. 내부 서버의 직접 SSH 접근은 차단하며, 허용된 IP의 관리자만 분리된 접속 키와 SSH ProxyJump를 사용해 Bastion Host를 경유합니다.
 
 ### 3) 온프레미스 아키텍처
 
-이미지
+<img width="3652" height="1822" alt="image" src="https://github.com/user-attachments/assets/33031814-0775-4435-bc47-bda3a0797507" />
+
 
 온프레미스에는 CI/CD와 MyData 시스템을 구성했습니다. Jenkins는 관리자 IP만 허용하고 민감 정보는 Credentials로 관리하며, MyData 트래픽은 Nginx와 HAProxy를 거쳐 Master·Slave DB로 분산됩니다. Airflow가 수집한 금융 데이터는 MongoDB Atlas의 벡터 검색에 활용됩니다.
 
